@@ -251,7 +251,8 @@ class MCPRouter:
                         "result": info_data
                     }
                 if tool_name == "yfinance_search":
-                    search_data = yfinance_client.search(raw_sym)
+                    search_func = getattr(yfinance_client, "search_symbols", None) or getattr(yfinance_client, "search", None)
+                    search_data = search_func(raw_sym) if search_func else []
                     return {
                         "status": "SUCCESS",
                         "server": "Market Intel Engine (Live)",
