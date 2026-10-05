@@ -5219,6 +5219,189 @@
       },
       "createdAt": 1791195961.429997,
       "updatedAt": 1791195961.4300015
+    },
+    "th_1791230115178": {
+      "id": "th_1791230115178",
+      "title": "can you tell me about google graphs",
+      "agentId": "agent_aa",
+      "agent": "Aa",
+      "agentModel": "amazon.nova-micro-v1:0",
+      "agentIcon": "smart_toy",
+      "lastMessage": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information, I don't have personal connections or affiliations beyond what's publicly known about my development. My primary focus is to assist users with their inquiries and tasks in a respectful and safe manner. If you have any specific questions or need assistance on a particular topic, I'm here to help!",
+      "timestamp": "Just now",
+      "tokens": "1433",
+      "duration": "1.06s",
+      "status": "Completed",
+      "citations": [],
+      "messages": [
+        {
+          "role": "user",
+          "content": "can you tell me about google graphs",
+          "time": "01:25 AM",
+          "citations": []
+        },
+        {
+          "role": "assistant",
+          "content": "## Google Charts\n\nGoogle Charts is a powerful, flexible, and free JavaScript charting library that offers a wide range of chart types and customization options. It's part of Google's suite of visualization tools and is widely used for creating interactive and visually appealing data visualizations on the web.\n\n### Key Features\n\n- **Versatile Chart Types**: Google Charts supports a variety of chart types including line charts, bar charts, pie charts, area charts, and more.\n- **Interactive Visualizations**: Charts are fully interactive, allowing users to zoom, pan, and hover over data points for more information.\n- **Customization**: Extensive customization options for colors, labels, legends, and other chart elements.\n- **Accessibility**: Built-in support for accessibility features to ensure charts are usable by people with disabilities.\n- **Integration**: Easy to integrate with other Google services and third-party libraries.\n\n### Getting Started\n\nTo use Google Charts, you need to include the library in your HTML file and then create and configure the chart using JavaScript.\n\n#### Example Code\n\nHere's a simple example of how to create a line chart using Google Charts:\n\n```html\n\n  \n    \n    \n      google.charts.load('current', {'packages':['corechart']});\n      google.charts.setOnLoadCallback(drawChart);\n\n      function drawChart() {\n        var data = new google.visualization.DataTable();\n        data.addColumn('string', 'Year');\n        data.addColumn('number', 'Sales');\n        data.addRows([\n          ['2014', 1000],\n          ['2015', 1170],\n          ['2016', 660],\n          ['2017', 1030]\n        ]);\n\n        var options = {\n          title: 'Company Performance',\n          curveType: 'function',\n          legend: { position: 'bottom' }\n        };\n\n        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));\n        chart.draw(data, options);\n      }\n    \n  \n  \n    \n  \n\n```\n\n### Visualization Capabilities\n\nHere's a JSON representation of a graph that can be used to visualize the data:\n\n```json\n{\n  \"title\": \"Company Performance Over Time\",\n  \"graphType\": \"line\",\n  \"recommendationReason\": \"A line chart effectively shows trends over time.\",\n  \"data\": [\n    {\"Year\": \"2014\", \"Sales\": 1000},\n    {\"Year\": \"2015\", \"Sales\": 1170},\n    {\"Year\": \"2016\", \"Sales\": 660},\n    {\"Year\": \"2017\", \"Sales\": 1030}\n  ]\n}\n```\n\n### Conclusion\n\nGoogle Charts is a robust and versatile tool for creating interactive and visually appealing charts. Its ease of integration and extensive customization options make it a popular choice for web developers looking to enhance their data visualization capabilities.",
+          "time": "01:25",
+          "citations": []
+        },
+        {
+          "role": "user",
+          "content": "what are you connected to",
+          "time": "01:26",
+          "citations": []
+        },
+        {
+          "role": "assistant",
+          "content": "I'm an AI system built by a team of inventors at Amazon. My primary purpose is to assist users by providing information, answering questions, and helping with various tasks in a safe and respectful manner. I don't have personal connections or relationships but am designed to support users in a helpful and reliable way. If you have any specific questions or need assistance with something, I'm here to help!",
+          "time": "01:26",
+          "citations": []
+        },
+        {
+          "role": "user",
+          "content": "any MCPs coonnection",
+          "time": "01:26",
+          "citations": []
+        },
+        {
+          "role": "assistant",
+          "content": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information, I don't have personal connections or affiliations beyond what's publicly known about my development. My primary focus is to assist users with their inquiries and tasks in a respectful and safe manner. If you have any specific questions or need assistance on a particular topic, I'm here to help!",
+          "time": "01:26",
+          "citations": []
+        }
+      ],
+      "metrics": null,
+      "activeTrace": {
+        "executionId": "exec_59b0888b",
+        "agentId": "agent_aa",
+        "version": "latest",
+        "sessionId": "th_1791230115178",
+        "status": "COMPLETED",
+        "inputs": {
+          "query": "any MCPs coonnection",
+          "history": [
+            {
+              "role": "user",
+              "content": "can you tell me about google graphs",
+              "time": "01:25 AM"
+            },
+            {
+              "role": "assistant",
+              "content": "## Google Charts\n\nGoogle Charts is a powerful, flexible, and free JavaScript charting library that offers a wide range of chart types and customization options. It's part of Google's suite of visualization tools and is widely used for creating interactive and visually appealing data visualizations on the web.\n\n### Key Features\n\n- **Versatile Chart Types**: Google Charts supports a variety of chart types including line charts, bar charts, pie charts, area charts, and more.\n- **Interactive Visualizations**: Charts are fully interactive, allowing users to zoom, pan, and hover over data points for more information.\n- **Customization**: Extensive customization options for colors, labels, legends, and other chart elements.\n- **Accessibility**: Built-in support for accessibility features to ensure charts are usable by people with disabilities.\n- **Integration**: Easy to integrate with other Google services and third-party libraries.\n\n### Getting Started\n\nTo use Google Charts, you need to include the library in your HTML file and then create and configure the chart using JavaScript.\n\n#### Example Code\n\nHere's a simple example of how to create a line chart using Google Charts:\n\n```html\n\n  \n    \n    \n      google.charts.load('current', {'packages':['corechart']});\n      google.charts.setOnLoadCallback(drawChart);\n\n      function drawChart() {\n        var data = new google.visualization.DataTable();\n        data.addColumn('string', 'Year');\n        data.addColumn('number', 'Sales');\n        data.addRows([\n          ['2014', 1000],\n          ['2015', 1170],\n          ['2016', 660],\n          ['2017', 1030]\n        ]);\n\n        var options = {\n          title: 'Company Performance',\n          curveType: 'function',\n          legend: { position: 'bottom' }\n        };\n\n        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));\n        chart.draw(data, options);\n      }\n    \n  \n  \n    \n  \n\n```\n\n### Visualization Capabilities\n\nHere's a JSON representation of a graph that can be used to visualize the data:\n\n```json\n{\n  \"title\": \"Company Performance Over Time\",\n  \"graphType\": \"line\",\n  \"recommendationReason\": \"A line chart effectively shows trends over time.\",\n  \"data\": [\n    {\"Year\": \"2014\", \"Sales\": 1000},\n    {\"Year\": \"2015\", \"Sales\": 1170},\n    {\"Year\": \"2016\", \"Sales\": 660},\n    {\"Year\": \"2017\", \"Sales\": 1030}\n  ]\n}\n```\n\n### Conclusion\n\nGoogle Charts is a robust and versatile tool for creating interactive and visually appealing charts. Its ease of integration and extensive customization options make it a popular choice for web developers looking to enhance their data visualization capabilities.",
+              "time": "01:25 AM"
+            },
+            {
+              "role": "user",
+              "content": "what are you connected to",
+              "time": "01:26 AM"
+            },
+            {
+              "role": "assistant",
+              "content": "I'm an AI system built by a team of inventors at Amazon. My primary purpose is to assist users by providing information, answering questions, and helping with various tasks in a safe and respectful manner. I don't have personal connections or relationships but am designed to support users in a helpful and reliable way. If you have any specific questions or need assistance with something, I'm here to help!",
+              "time": "01:26 AM"
+            },
+            {
+              "role": "user",
+              "content": "any MCPs coonnection",
+              "time": "01:26 AM"
+            }
+          ]
+        },
+        "outputs": {
+          "response": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information, I don't have personal connections or affiliations beyond what's publicly known about my development. My primary focus is to assist users with their inquiries and tasks in a respectful and safe manner. If you have any specific questions or need assistance on a particular topic, I'm here to help!",
+          "confidence": 0.95
+        },
+        "steps": [
+          {
+            "stepIndex": 1,
+            "stepType": "THOUGHT",
+            "title": "Reasoning Step 1 (amazon.nova-micro-v1:0)",
+            "inputPayload": null,
+            "outputPayload": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information,",
+            "tokensUsed": 1433,
+            "durationMs": 1059,
+            "timestamp": 1791230202.5152473
+          },
+          {
+            "stepIndex": 2,
+            "stepType": "FINAL_OUTPUT",
+            "title": "Final Response Formulated & Validated",
+            "inputPayload": null,
+            "outputPayload": {
+              "response": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information, I don't have personal connections or affiliations beyond what's publicly known about my development. My primary focus is to assist users with their inquiries and tasks in a respectful and safe manner. If you have any specific questions or need assistance on a particular topic, I'm here to help!",
+              "confidence": 0.95
+            },
+            "tokensUsed": 0,
+            "durationMs": 0,
+            "timestamp": 1791230202.515284
+          }
+        ],
+        "totalTokens": 1433,
+        "contextUsagePercent": 1.57,
+        "contextCompressedCount": 0,
+        "startedAt": 1791230201.4557235,
+        "completedAt": 1791230202.5152798,
+        "error": null
+      },
+      "createdAt": 1791230202.5153615,
+      "updatedAt": 1791230202.5153763
+    },
+    "th_1791230115164": {
+      "id": "th_1791230115164",
+      "title": "can you tell me about google graphs",
+      "agentId": "agent_aa",
+      "agent": "Aa",
+      "agentModel": "amazon.nova-micro-v1:0",
+      "agentIcon": "smart_toy",
+      "lastMessage": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information, I don't have personal connections or affiliations beyond what's publicly known about my development. My primary focus is to assist users with their inquiries and tasks in a respectful and safe manner. If you have any specific questions or need assistance on a particular topic, I'm here to help!",
+      "timestamp": "Just now",
+      "tokens": "150",
+      "duration": "0.00s",
+      "status": "Completed",
+      "citations": [],
+      "messages": [
+        {
+          "role": "user",
+          "content": "can you tell me about google graphs",
+          "time": "01:25 AM",
+          "citations": []
+        },
+        {
+          "role": "assistant",
+          "content": "## Google Charts\n\nGoogle Charts is a powerful, flexible, and free JavaScript charting library that offers a wide range of chart types and customization options. It's part of Google's suite of visualization tools and is widely used for creating interactive and visually appealing data visualizations on the web.\n\n### Key Features\n\n- **Versatile Chart Types**: Google Charts supports a variety of chart types including line charts, bar charts, pie charts, area charts, and more.\n- **Interactive Visualizations**: Charts are fully interactive, allowing users to zoom, pan, and hover over data points for more information.\n- **Customization**: Extensive customization options for colors, labels, legends, and other chart elements.\n- **Accessibility**: Built-in support for accessibility features to ensure charts are usable by people with disabilities.\n- **Integration**: Easy to integrate with other Google services and third-party libraries.\n\n### Getting Started\n\nTo use Google Charts, you need to include the library in your HTML file and then create and configure the chart using JavaScript.\n\n#### Example Code\n\nHere's a simple example of how to create a line chart using Google Charts:\n\n```html\n\n  \n    \n    \n      google.charts.load('current', {'packages':['corechart']});\n      google.charts.setOnLoadCallback(drawChart);\n\n      function drawChart() {\n        var data = new google.visualization.DataTable();\n        data.addColumn('string', 'Year');\n        data.addColumn('number', 'Sales');\n        data.addRows([\n          ['2014', 1000],\n          ['2015', 1170],\n          ['2016', 660],\n          ['2017', 1030]\n        ]);\n\n        var options = {\n          title: 'Company Performance',\n          curveType: 'function',\n          legend: { position: 'bottom' }\n        };\n\n        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));\n        chart.draw(data, options);\n      }\n    \n  \n  \n    \n  \n\n```\n\n### Visualization Capabilities\n\nHere's a JSON representation of a graph that can be used to visualize the data:\n\n```json\n{\n  \"title\": \"Company Performance Over Time\",\n  \"graphType\": \"line\",\n  \"recommendationReason\": \"A line chart effectively shows trends over time.\",\n  \"data\": [\n    {\"Year\": \"2014\", \"Sales\": 1000},\n    {\"Year\": \"2015\", \"Sales\": 1170},\n    {\"Year\": \"2016\", \"Sales\": 660},\n    {\"Year\": \"2017\", \"Sales\": 1030}\n  ]\n}\n```\n\n### Conclusion\n\nGoogle Charts is a robust and versatile tool for creating interactive and visually appealing charts. Its ease of integration and extensive customization options make it a popular choice for web developers looking to enhance their data visualization capabilities.",
+          "time": "01:25 AM",
+          "citations": []
+        },
+        {
+          "role": "user",
+          "content": "what are you connected to",
+          "time": "01:26 AM",
+          "citations": []
+        },
+        {
+          "role": "assistant",
+          "content": "I'm an AI system built by a team of inventors at Amazon. My primary purpose is to assist users by providing information, answering questions, and helping with various tasks in a safe and respectful manner. I don't have personal connections or relationships but am designed to support users in a helpful and reliable way. If you have any specific questions or need assistance with something, I'm here to help!",
+          "time": "01:26 AM",
+          "citations": []
+        },
+        {
+          "role": "user",
+          "content": "any MCPs coonnection",
+          "time": "01:26 AM",
+          "citations": []
+        },
+        {
+          "role": "assistant",
+          "content": "I'm an AI system built by a team of inventors at Amazon. While I'm designed to provide helpful and accurate information, I don't have personal connections or affiliations beyond what's publicly known about my development. My primary focus is to assist users with their inquiries and tasks in a respectful and safe manner. If you have any specific questions or need assistance on a particular topic, I'm here to help!",
+          "time": "01:26 AM",
+          "citations": []
+        }
+      ],
+      "metrics": null,
+      "activeTrace": null,
+      "createdAt": 1791230202.5379214,
+      "updatedAt": 1791230202.5395813
     }
   }
 }

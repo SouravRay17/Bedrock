@@ -183,6 +183,17 @@ class AgentRuntimeEngine:
         if agent_def.instructions:
             prompt_parts.append(agent_def.instructions)
 
+        # Agent Identity & Connected MCP Awareness
+        identity_directive = (
+            f"### AGENT IDENTITY & CONNECTED CAPABILITIES\n"
+            f"You are '{agent_def.name}', an enterprise autonomous AI agent built on AgentOS Studio.\n"
+            f"When users ask about your identity, what tools or capabilities you have, or what you are connected to (such as MCPs, servers, or APIs):\n"
+            f"- Explicitly reference the connected MCP collections and tools configured for you in `<connected_resources>`.\n"
+            f"- List the connected MCPs and available tools clearly.\n"
+            f"- Never say you have no connections or affiliations when tools and MCP collections are configured."
+        )
+        prompt_parts.append(identity_directive)
+
         # Check for modular prompt sections
         extra_sections = getattr(agent_def, "promptSections", None) or getattr(agent_version, "promptSections", None)
         if isinstance(extra_sections, list):
