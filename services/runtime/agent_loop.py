@@ -2,10 +2,11 @@ import json
 import re
 import time
 import urllib.parse
-import urllib.request
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
+
+import httpx
 
 from packages.agent_spec.models import (
     AgentVersion,
@@ -831,9 +832,9 @@ class AgentRuntimeEngine:
             # B. Yahoo finance autocomplete search
             try:
                 url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(clean_ent)}&quotesCount=8"
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
-                with urllib.request.urlopen(req, timeout=4) as s_resp:
-                    data = json.loads(s_resp.read().decode("utf-8"))
+                resp = httpx.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=4.0)
+                if resp.status_code == 200:
+                    data = resp.json()
                     for q in data.get("quotes", []):
                         if q.get("quoteType") in ("EQUITY", "ETF", "INDEX"):
                             s = q.get("symbol")
@@ -880,9 +881,9 @@ class AgentRuntimeEngine:
                 try:
                     q_enc = urllib.parse.quote(f"{clean_ent} stock ticker Yahoo Finance")
                     url = f"https://lite.duckduckgo.com/lite/?q={q_enc}"
-                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-                    with urllib.request.urlopen(req, timeout=4) as resp:
-                        html = resp.read().decode("utf-8", errors="ignore")
+                    resp = httpx.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=4.0)
+                    if resp.status_code == 200:
+                        html = resp.text
                         web_tickers = re.findall(r"finance\.yahoo\.com/quote/([A-Za-z0-9&_\.\-]+)", html)
                         for wt in web_tickers:
                             clean_wt = wt.strip("/").upper()

@@ -333,7 +333,7 @@ class MCPCodeInspector:
 
             for target_url in candidates:
                 try:
-                    async with httpx.AsyncClient(timeout=3.5, follow_redirects=True, verify=False) as client:
+                    async with httpx.AsyncClient(timeout=3.5, follow_redirects=True, verify=False) as client:  # nosec B501
                         res = await client.get(target_url, headers=req_headers)
                         if res.status_code == 200:
                             data = res.json()

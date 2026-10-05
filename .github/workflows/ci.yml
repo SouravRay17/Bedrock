@@ -162,7 +162,7 @@ jobs:
       - name: Set up Node.js for CDK CLI
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install Python CDK Dependencies
         run: |
@@ -172,13 +172,13 @@ jobs:
       - name: Synthesize CloudFormation Ephemeral Stack (cdk synth)
         run: |
           echo "Synthesizing AWS CDK Ephemeral Environment Template for Bedrock AgentOS Studio..."
-          npx --yes aws-cdk synth
+          npx --yes aws-cdk@latest synth
 
       - name: Preview Deployment Plan (cdk diff)
         if: env.AWS_ACCESS_KEY_ID != ''
         run: |
           echo "Previewing ephemeral infrastructure diff against AWS..."
-          npx --yes aws-cdk diff || true
+          npx --yes aws-cdk@latest diff || true
 
   # =========================================================================
   # 6. SONARQUBE / SONARCLOUD QUALITY GATE
