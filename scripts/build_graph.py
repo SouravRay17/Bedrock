@@ -7,11 +7,11 @@ def build_codebase_graph():
     out_dir.mkdir(exist_ok=True)
 
     nodes = [
-        {"id": "AgentOS_App", "label": "AgentOS Application Shell", "category": "Frontend"},
-        {"id": "VisualCanvas", "label": "Visual DAG Canvas", "category": "Frontend"},
-        {"id": "NLBuilder", "label": "Natural Language Agent Builder", "category": "Frontend"},
-        {"id": "Playground", "label": "Agent Playground & Tracer", "category": "Frontend"},
-        {"id": "RegistriesView", "label": "Registries Manager", "category": "Frontend"},
+        {"id": "AgentOS_App", "label": "AgentOS Studio Shell", "category": "Frontend"},
+        {"id": "HomeView", "label": "Home Dashboard & Analytics", "category": "Frontend"},
+        {"id": "ExploreView", "label": "Explore Registry Catalog", "category": "Frontend"},
+        {"id": "PlaygroundView", "label": "Interactive Agent Playground & Tracer", "category": "Frontend"},
+        {"id": "AgentDetailView", "label": "Agent Studio Configuration", "category": "Frontend"},
         {"id": "FastAPI_Server", "label": "FastAPI Control & Runtime API", "category": "API"},
         {"id": "RegistryService", "label": "Registry Subsystem", "category": "ControlPlane"},
         {"id": "NL_BuilderService", "label": "NL Synthesis Engine", "category": "ControlPlane"},
@@ -26,12 +26,10 @@ def build_codebase_graph():
     ]
 
     edges = [
-        {"source": "AgentOS_App", "target": "VisualCanvas", "relation": "renders"},
-        {"source": "AgentOS_App", "target": "NLBuilder", "relation": "renders"},
-        {"source": "AgentOS_App", "target": "Playground", "relation": "renders"},
-        {"source": "AgentOS_App", "target": "RegistriesView", "relation": "renders"},
-        {"source": "NLBuilder", "target": "NL_BuilderService", "relation": "invokes_api"},
-        {"source": "Playground", "target": "AgentRuntimeEngine", "relation": "executes_agent"},
+        {"source": "AgentOS_App", "target": "HomeView", "relation": "renders"},
+        {"source": "AgentOS_App", "target": "ExploreView", "relation": "renders"},
+        {"source": "AgentOS_App", "target": "PlaygroundView", "relation": "renders"},
+        {"source": "AgentOS_App", "target": "AgentDetailView", "relation": "renders"},
         {"source": "FastAPI_Server", "target": "RegistryService", "relation": "routes_registry"},
         {"source": "FastAPI_Server", "target": "AgentRuntimeEngine", "relation": "routes_execution"},
         {"source": "AgentRuntimeEngine", "target": "ModelRouter", "relation": "invokes_inference"},

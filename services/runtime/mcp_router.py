@@ -26,7 +26,7 @@ class MCPRouter:
         AWS Bedrock NEVER receives this token.
         """
         if not token_ref:
-            token_ref = "{{MCP_AUTH_TOKEN}}"
+            token_ref = "{{MCP_AUTH_TOKEN}}"  # nosec B105
 
         clean_key = re.sub(r"[{}\$]", "", token_ref).strip()
 
@@ -155,35 +155,31 @@ class MCPRouter:
                     # Case A: REST API / OpenAPI endpoints (e.g. FastAPI / Cloudflare tunnel)
                     if "openapi" in server_url.lower() or "/api/" in server_url:
                         base_api = server_url.split("/openapi.json")[0].rstrip("/")
-                        route_map = {
-                            "yfinance_search": ("/api/search", "GET"),
-                            "yfinance_get_quote": ("/api/quote", "GET"),
-                            "yfinance_get_stock_info": ("/api/stock_info", "GET"),
-                            "yfinance_get_historical_data": ("/api/historical_data", "GET"),
-                            "yfinance_get_news": ("/api/news", "GET"),
-                            "portfolio_live_analysis": ("/api/portfolio_live_analysis", "POST"),
-                        }
-                        if tool_name in route_map:
-                            route_path, http_method = route_map[tool_name]
-                            target_endpoint = f"{base_api}{route_path}"
-                            if http_method == "GET":
-                                res = await client.get(target_endpoint, params=tool_input, headers=headers)
-                            else:
-                                res = await client.post(target_endpoint, json=tool_input, headers=headers)
+                        matched_tool = next(
+                            (t for t in (col.discoveredTools or []) if isinstance(t, dict) and t.get("name") == tool_name),
+                            None
+                        )
+                        route_path = (matched_tool.get("path") if matched_tool and matched_tool.get("path") else f"/{tool_name.replace('_', '/')}")
+                        http_method = (matched_tool.get("httpMethod") if matched_tool and matched_tool.get("httpMethod") else "POST").upper()
+                        target_endpoint = f"{base_api}{route_path}"
+                        if http_method == "GET":
+                            res = await client.get(target_endpoint, params=tool_input, headers=headers)
+                        else:
+                            res = await client.post(target_endpoint, json=tool_input, headers=headers)
 
-                            if res.is_success:
-                                try:
-                                    json_data = res.json()
-                                    return {
-                                        "status": "SUCCESS",
-                                        "server": target_endpoint,
-                                        "tool": tool_name,
-                                        "authenticated": True,
-                                        "token_applied": masked_token,
-                                        "result": self.sanitize_response_data(json_data)
-                                    }
-                                except (ValueError, TypeError):
-                                    pass
+                        if res.is_success:
+                            try:
+                                json_data = res.json()
+                                return {
+                                    "status": "SUCCESS",
+                                    "server": target_endpoint,
+                                    "tool": tool_name,
+                                    "authenticated": True,
+                                    "token_applied": masked_token,
+                                    "result": self.sanitize_response_data(json_data)
+                                }
+                            except (ValueError, TypeError):
+                                pass
 
                     # Case B: Standard MCP JSON-RPC
                     rpc_payload = {
@@ -213,72 +209,6 @@ class MCPRouter:
                             pass
             except (httpx.HTTPError, OSError):
                 # Fallback to live financial market data if remote tunnel is slow/offline
-                pass
-
-        # Real-time yfinance fallback for market data tools if tunnel disconnected
-        if tool_name in ("yfinance_get_quote", "yfinance_get_stock_info", "yfinance_search", "yfinance_get_news", "yfinance_get_historical_data"):
-            try:
-                import sys
-                mcp_path = r"D:\Projects\MCPs\mcp-market-intel"
-                if mcp_path not in sys.path:
-                    sys.path.insert(0, mcp_path)
-                from src import yfinance_client  # pylint: disable=import-error,import-outside-toplevel
-
-                raw_sym = str(tool_input.get("symbol_or_name") or tool_input.get("symbol") or tool_input.get("query") or "AAPL").strip()
-                if tool_name == "yfinance_get_historical_data":
-                    period = str(tool_input.get("period", "1mo"))
-                    interval = str(tool_input.get("interval", "1d"))
-                    hist_data = yfinance_client.get_historical_data(raw_sym, period=period, interval=interval)
-                    return {
-                        "status": "SUCCESS",
-                        "server": "Market Intel Engine (Live)",
-                        "tool": tool_name,
-                        "authenticated": True,
-                        "token_applied": masked_token,
-                        "result": hist_data
-                    }
-                if tool_name == "yfinance_get_quote":
-                    quote_data = yfinance_client.get_quote(raw_sym)
-                    return {
-                        "status": "SUCCESS",
-                        "server": "Market Intel Engine (Live)",
-                        "tool": tool_name,
-                        "authenticated": True,
-                        "token_applied": masked_token,
-                        "result": quote_data
-                    }
-                if tool_name == "yfinance_get_stock_info":
-                    info_data = yfinance_client.get_stock_info(raw_sym)
-                    return {
-                        "status": "SUCCESS",
-                        "server": "Market Intel Engine (Live)",
-                        "tool": tool_name,
-                        "authenticated": True,
-                        "token_applied": masked_token,
-                        "result": info_data
-                    }
-                if tool_name == "yfinance_search":
-                    search_func = getattr(yfinance_client, "search_symbols", None) or getattr(yfinance_client, "search", None)
-                    search_data = search_func(raw_sym) if search_func else []
-                    return {
-                        "status": "SUCCESS",
-                        "server": "Market Intel Engine (Live)",
-                        "tool": tool_name,
-                        "authenticated": True,
-                        "token_applied": masked_token,
-                        "result": search_data
-                    }
-                if tool_name == "yfinance_get_news":
-                    news_data = yfinance_client.get_news(raw_sym)
-                    return {
-                        "status": "SUCCESS",
-                        "server": "Market Intel Engine (Live)",
-                        "tool": tool_name,
-                        "authenticated": True,
-                        "token_applied": masked_token,
-                        "result": news_data
-                    }
-            except Exception:  # noqa: BLE001
                 pass
 
         # Return standardized MCP execution response with sanitized payload
