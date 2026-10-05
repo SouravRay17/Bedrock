@@ -20,6 +20,7 @@ dist/
 build/
 apps/web/dist/
 apps/web/build/
+cdk.out/
 
 # Testing & Coverage
 .coverage

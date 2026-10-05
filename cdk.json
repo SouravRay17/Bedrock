@@ -1,0 +1,19 @@
+{
+  "app": "python infra/app.py",
+  "watch": {
+    "include": [
+      "infra/**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "requirements*.txt",
+      "**/__init__.py",
+      "python/__pycache__",
+      "tests/**"
+    ]
+  },
+  "context": {
+    "aws-cdk:enableDiffNoFail": "true"
+  }
+}
