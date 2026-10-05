@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import CandlestickChart from './CandlestickChart';
+import UniversalGraph from './graphs';
 
 export default function PlaygroundView({ agent = {}, initialThread = null }) {
   const [activeThreadId, setActiveThreadId] = useState(initialThread?.id || `th_${Date.now()}`);
@@ -412,7 +412,7 @@ export default function PlaygroundView({ agent = {}, initialThread = null }) {
               <span>Switch to Table View</span>
             </button>
           </div>
-          <CandlestickChart data={candleData} symbol={symbol} title="Historical Price Action" />
+          <UniversalGraph data={candleData} symbol={symbol} title="Dataset Visualization" />
         </div>
       );
     }
@@ -575,9 +575,11 @@ export default function PlaygroundView({ agent = {}, initialThread = null }) {
       if (line.trim().startsWith('```')) {
         if (inCodeBlock) {
           const rawCode = codeBuffer.join('\n');
-          let parsedCandles = null;
-          let parsedSymbol = contextSymbol || 'STK';
-          let parsedTitle = 'Market Candlesticks';
+          let parsedData = null;
+          let parsedSymbol = contextSymbol || 'DATA';
+          let parsedTitle = 'AI Data Visualization';
+          let suggestedType = null;
+          let recommendationReason = null;
 
           try {
             // Sanitize unquoted NaN, Infinity, -Infinity that can come from numpy/pandas serialization
@@ -587,41 +589,47 @@ export default function PlaygroundView({ agent = {}, initialThread = null }) {
               .replace(/:\s*-Infinity\b/gi, ': null');
 
             const parsed = JSON.parse(sanitizedCode);
-            if (Array.isArray(parsed) && parsed.length > 0 && ('open' in parsed[0] || 'Open' in parsed[0])) {
-              parsedCandles = parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsedData = parsed;
             } else if (parsed && typeof parsed === 'object') {
-              parsedCandles = parsed.candles || parsed.data || parsed.historical || parsed.bars;
+              parsedData = parsed.data || parsed.candles || parsed.records || parsed.series || parsed.items || parsed;
               if (parsed.symbol) parsedSymbol = parsed.symbol;
               if (parsed.title) parsedTitle = parsed.title;
+              if (parsed.graphType || parsed.chartType) suggestedType = parsed.graphType || parsed.chartType;
+              if (parsed.recommendationReason || parsed.reason) recommendationReason = parsed.recommendationReason || parsed.reason;
             }
           } catch {
             // Loose fallback extraction for chart blocks with minor formatting discrepancies
             try {
-              const candleMatch = rawCode.match(/"candles"\s*:\s*(\[[^]*?\]\s*(?:,\s*"|\}))/);
+              const candleMatch = rawCode.match(/"(?:candles|data|records)"\s*:\s*(\[[^]*?\]\s*(?:,\s*"|\}))/);
               if (candleMatch) {
                 const subStr = candleMatch[1].replace(/,\s*"[^"]*"\s*:.*$/, '').replace(/\}$/, '').trim();
                 const cleanedJson = subStr
                   .replace(/:\s*NaN\b/gi, ': null')
                   .replace(/:\s*Infinity\b/gi, ': null');
-                parsedCandles = JSON.parse(cleanedJson);
+                parsedData = JSON.parse(cleanedJson);
               }
             } catch {
               // Not JSON
             }
           }
 
-          // Filter out null/invalid candles
-          const cleanCandles = Array.isArray(parsedCandles)
-            ? parsedCandles.filter(c => c && typeof c === 'object' && c.open != null && c.close != null && !isNaN(Number(c.open)) && !isNaN(Number(c.close)))
-            : [];
+          // Check if parsedData is visualizable
+          const isVisualizable = (
+            (Array.isArray(parsedData) && parsedData.length > 0 && typeof parsedData[0] === 'object') ||
+            (Array.isArray(parsedData) && parsedData.length >= 2 && typeof parsedData[0] === 'number') ||
+            (codeTag.includes('graph') || codeTag.includes('chart') || codeTag.includes('candlestick') || codeTag.includes('visualization'))
+          );
 
-          if (cleanCandles.length > 0) {
+          if (isVisualizable && parsedData) {
             elements.push(
-              <CandlestickChart
-                key={`candle-chart-${i}`}
-                data={cleanCandles}
+              <UniversalGraph
+                key={`universal-graph-${i}`}
+                data={parsedData}
                 symbol={parsedSymbol}
                 title={parsedTitle}
+                suggestedType={suggestedType}
+                recommendationReason={recommendationReason}
               />
             );
           } else {

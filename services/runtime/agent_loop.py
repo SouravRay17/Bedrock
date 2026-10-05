@@ -224,6 +224,19 @@ class AgentRuntimeEngine:
             prompt_parts.append(kb_part)
 
 
+        # Universal AI Data Visualization Protocol
+        prompt_parts.append(
+            "<visualization_capabilities>\n"
+            "When presenting numeric, multi-metric, or structured findings (sales, distributions, latency, benchmarks, financials, etc.):\n"
+            "You can provide a clean ```graph code block with JSON containing:\n"
+            "  - `title`: Short descriptive title of the insight\n"
+            "  - `graphType`: Recommended visualization ('bar' | 'line' | 'area' | 'donut' | 'scatter' | 'radar' | 'heatmap' | 'candlestick' | 'table')\n"
+            "  - `recommendationReason`: Brief explanation of why this graph type best reveals the patterns in this data\n"
+            "  - `data`: Array of structured records or series\n"
+            "The AgentOS UI will render this graph interactively and allow users to switch between visualization representations.\n"
+            "</visualization_capabilities>"
+        )
+
         system_prompt = "\n\n".join(prompt_parts)
 
         # Initialize Working Context with multi-turn conversation history if provided

@@ -26,7 +26,7 @@ class MCPRouter:
         AWS Bedrock NEVER receives this token.
         """
         if not token_ref:
-            token_ref = "{{MCP_AUTH_TOKEN}}"
+            token_ref = "{{MCP_AUTH_TOKEN}}"  # nosec B105
 
         clean_key = re.sub(r"[{}\$]", "", token_ref).strip()
 

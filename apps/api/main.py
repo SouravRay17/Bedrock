@@ -577,9 +577,9 @@ class AgentStreamBroadcaster:
                 try:
                     q.get_nowait()
                     q.put_nowait(event_dict)
-                except Exception:  # noqa: BLE001, S110
+                except Exception:  # noqa: BLE001, S110  # nosec B110
                     pass
-            except Exception:  # noqa: BLE001, S110
+            except Exception:  # noqa: BLE001, S110  # nosec B110
                 pass
 
 broadcaster = AgentStreamBroadcaster()
@@ -724,7 +724,7 @@ async def websocket_agent_stream(websocket: WebSocket, agent_id: str):
                 await websocket.send_text(json.dumps(event))
         except (asyncio.CancelledError, WebSocketDisconnect):
             pass
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: BLE001, S110  # nosec B110
             pass
 
     async def incoming_listener():
@@ -782,7 +782,7 @@ async def websocket_agent_stream(websocket: WebSocket, agent_id: str):
         except Exception as e:  # noqa: BLE001
             try:
                 await websocket.send_text(json.dumps({"event": "error", "data": str(e)}))
-            except Exception:  # noqa: BLE001, S110
+            except Exception:  # noqa: BLE001, S110  # nosec B110
                 pass
 
     pump_task = asyncio.create_task(outgoing_pump())
@@ -800,7 +800,7 @@ async def websocket_agent_stream(websocket: WebSocket, agent_id: str):
         try:
             if websocket.client_state.name != "DISCONNECTED":
                 await websocket.close()
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: BLE001, S110  # nosec B110
             pass
 
 @app.websocket("/api/v1/agents/stream")
@@ -828,7 +828,7 @@ async def websocket_global_agent_stream(websocket: WebSocket):
         broadcaster.unsubscribe(q, "*")
         try:
             await websocket.close()
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: BLE001, S110  # nosec B110
             pass
 
 # --- Server-Sent Events (SSE) Stream ---

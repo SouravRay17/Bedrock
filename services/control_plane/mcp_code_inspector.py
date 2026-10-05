@@ -808,7 +808,7 @@ class MCPCodeInspector:
                                 for ft in file_tools:
                                     if not any(t["name"] == ft["name"] for t in folder_tools):
                                         folder_tools.append(ft)
-                        except Exception:  # noqa: BLE001, S110
+                        except Exception:  # noqa: BLE001, S110  # nosec B110
                             pass
 
                 clean_name = entry.replace("-", " ").replace("_", " ").title()
