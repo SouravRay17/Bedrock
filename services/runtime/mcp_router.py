@@ -50,12 +50,19 @@ class MCPRouter:
         return "mcp_pat_live_sandbox_77a8b9c0d1e2f3"
 
     @classmethod
+    def mask_token(cls, token: str) -> str:
+        """Helper to mask sensitive tokens, preserving minimal prefix if long enough."""
+        if not token or len(token) <= 8:
+            return "••••••••"
+        return f"{token[:4]}••••••••{token[-4:]}"
+
+    @classmethod
     def sanitize_response_data(cls, data: Any) -> Any:
         """Strips inadvertent tokens and sensitive keys from output payloads."""
         if isinstance(data, dict):
             clean = {}
             for k, v in data.items():
-                if any(sec in k.lower() for sec in ["token", "secret", "password", "auth", "bearer", "apikey", "private_key"]):
+                if any(sec in k.lower() for sec in ["token", "secret", "password", "auth", "bearer", "apikey", "api_key", "private_key", "access_key"]):
                     clean[k] = "••••••••"
                 else:
                     clean[k] = cls.sanitize_response_data(v)
@@ -251,7 +258,8 @@ class MCPRouter:
                         "result": info_data
                     }
                 if tool_name == "yfinance_search":
-                    search_data = yfinance_client.search(raw_sym)
+                    search_func = getattr(yfinance_client, "search_symbols", None) or getattr(yfinance_client, "search", None)
+                    search_data = search_func(raw_sym) if search_func else []
                     return {
                         "status": "SUCCESS",
                         "server": "Market Intel Engine (Live)",

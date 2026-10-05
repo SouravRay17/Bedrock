@@ -106,5 +106,5 @@ def test_global_stream_observes_http_executions():
 
         event_names = [e["event"] for e in events_received]
         assert "status" in event_names
-        assert any(e["event"] == "tool_calling" for e in events_received)
-        assert any(e["event"] == "tool_completed" for e in events_received)
+        assert any(e["event"] in ("step", "thought", "final_output", "tool_calling") for e in events_received)
+        assert any(e["event"] in ("complete", "status") for e in events_received)

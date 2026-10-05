@@ -230,18 +230,23 @@ class AgentRuntimeEngine:
             "### MANDATORY REAL-TIME TOOL USAGE, TICKER SEARCH & CHARTING DIRECTIVE\n"
             "CRITICAL: You are equipped with live financial tools (`yfinance_search`, `yfinance_get_quote`, `yfinance_get_historical_data`, `yfinance_get_stock_info`).\n"
             "RULE 1: COMPANY NAME SEARCH & TICKER RESOLUTION:\n"
-            "   - When the user asks about ANY company by name, brand, product, or colloquial/misspelled name (e.g. 'Amarrather batteries', 'Amara Raja', 'Tata Motors', 'Reliance', 'State Bank of India', 'Tesla', 'Google'):\n"
-            "   - You MUST FIRST call `yfinance_search(query=...)` to discover the exact official company name, exchange (e.g. NSE, BSE, NASDAQ, NYSE), and exact ticker symbol (e.g. 'Amara Raja Batteries' -> 'ARE&M.NS' on NSE).\n"
+            "   - When the user asks about ANY company by name, brand, product, or colloquial/misspelled name (e.g. 'Google', 'Alphabet', 'Amara Raja', 'Tata Motors', 'Reliance', 'State Bank of India', 'Tesla'):\n"
+            "   - CRITICAL ENTITY RECOGNITION: Distinguish between the target company and analytical keywords! Words such as 'patterns forming', 'patterns', 'pattern', 'analysis', 'report', 'chart', 'trend', 'support', 'resistance', 'breakout' are analytical tasks, NOT company names! For example, 'can you check the google and give me the patterns forming' refers strictly to GOOGLE (Alphabet Inc. -> 'GOOGL'), NEVER Pattern Group Inc!\n"
+            "   - You MUST call `yfinance_search(query=...)` with the actual company name to discover the official name, exchange, and ticker symbol.\n"
             "   - NEVER assume Apple / AAPL unless the user explicitly asked for Apple! ALWAYS resolve the user's specific requested company.\n"
             "RULE 2: NO HALLUCINATION:\n"
             "   - NEVER fabricate, invent, or make up stock quotes, numbers, dates, or prices! Whenever a user asks for stock prices, quotes, or historical charts, you MUST call the corresponding MCP tool using the resolved ticker symbol.\n"
-            "RULE 3: CHARTS & HISTORICAL TIME HORIZONS:\n"
-            "   - When the user asks for a chart, candlestick graph, or historical price movement:\n"
-            "     * You MUST call `yfinance_get_historical_data(symbol_or_name=..., period=..., interval=...)`.\n"
-            "     * Map the horizon: '1mo', '3mo', '6mo', '1y', '3y', '5y' (use interval='1d' for <= 1y, interval='1wk' for 3y/5y).\n"
-            "     * Output a ```candlestick code block with JSON: `{\"symbol\": \"...\", \"period\": \"...\", \"interval\": \"...\", \"candles\": [...]}` or as a markdown table `| Date | Open | High | Low | Close | Volume |`.\n"
-            "     * State the exact resolved ticker and exchange (e.g. 'Amara Raja Energy & Mobility Ltd (NSE: ARE&M.NS)').\n"
-            "RULE 4: SUMMARY & ACCURACY:\n"
+            "RULE 3: TEXT ANALYSIS FIRST & CONCISE REPORT (MANDATORY):\n"
+            "   - NEVER reply with ONLY a chart or raw metrics without in-depth textual analysis and explanations!\n"
+            "   - When the user asks for 'patterns forming', 'analysis', 'report', 'explain', or 'insights', you MUST provide:\n"
+            "     * Executive Summary & Trend Stance (Bullish, Bearish, or Neutral/Consolidating).\n"
+            "     * Technical Patterns Forming (e.g. Higher Highs/Lows, Consolidations, Breakout Levels, Candlestick formations like Engulfing, Hammer, Doji).\n"
+            "     * Key Support, Resistance Price Levels and Moving Averages.\n"
+            "     * Actionable Takeaways & Risk Considerations in clear bullet points.\n"
+            "   - If the user specifies 'text answers', 'concise report', 'no graph', or 'don't want graph', prioritize deep textual explanation and omit graphs.\n"
+            "RULE 4: CHARTS & HISTORICAL TIME HORIZONS:\n"
+            "   - When a chart or visual plot is requested, call `yfinance_get_historical_data(symbol_or_name=..., period=..., interval=...)` and include the ```candlestick code block alongside your detailed text analysis.\n"
+            "RULE 5: SUMMARY & ACCURACY:\n"
             "   - Present clear, concise takeaways: official company name, exact ticker symbol, currency (₹ for Indian stocks, $ for US stocks), current price, period high/low, net percentage change, and trend direction."
         )
         prompt_parts.append(two_stage_directive)
@@ -671,7 +676,8 @@ class AgentRuntimeEngine:
             "candlestick", "candle stick", "candle", "candles", "ohlc", "chart", "charts",
             "graph", "graphs", "grpah", "plot", "plots", "stock", "stocks", "share", "shares",
             "ticker", "quote", "quotes", "price", "prices", "market", "trading", "invest",
-            "nifty", "sensex", "bse", "nse", "nasdaq", "nyse"
+            "nifty", "sensex", "bse", "nse", "nasdaq", "nyse", "pattern", "patterns",
+            "formation", "formations", "breakout", "technical", "analysis", "report"
         )
         if not any(kw in all_user_lower for kw in market_keywords):
             return final_response
@@ -696,51 +702,99 @@ class AgentRuntimeEngine:
         is_simulated = any(p in resp_lower for p in simulated_tool_phrases)
 
         is_chart_requested = any(w in all_user_lower for w in ("candlestick", "candle stick", "candle", "graph", "chart", "plot", "grpah"))
+        is_analysis_requested = any(w in all_user_lower for w in ("pattern", "patterns", "technical", "analysis", "report", "insights", "formation"))
         has_chart_block = "```candlestick" in resp_str
 
-        should_fulfill = is_excuse or is_simulated or (is_chart_requested and not has_chart_block)
+        should_fulfill = is_excuse or is_simulated or is_analysis_requested or (is_chart_requested and not has_chart_block)
         if not should_fulfill:
             return final_response
 
         # 1. Smart Dynamic Entity Extraction
+        known_aliases = {
+            "google": "GOOGL",
+            "alphabet": "GOOGL",
+            "zomato": "ETERNAL.NS",
+            "amarraja": "ARE&M.NS",
+            "amara raja": "ARE&M.NS",
+            "amarrather": "ARE&M.NS",
+            "eternal": "ETERNAL.NS",
+            "tata motors": "TMCV.NS",
+            "tata steel": "TATASTEEL.NS",
+            "tata power": "TATAPOWER.NS",
+            "tcs": "TCS.NS",
+            "infosys": "INFY.NS",
+            "wipro": "WIPRO.NS",
+            "hcl": "HCLTECH.NS",
+            "reliance": "RELIANCE.NS",
+            "state bank of india": "SBIN.NS",
+            "sbi": "SBIN.NS",
+            "hdfc": "HDFCBANK.NS",
+            "hdfc bank": "HDFCBANK.NS",
+            "icici": "ICICIBANK.NS",
+            "maruti": "MARUTI.NS",
+            "maruti suzuki": "MARUTI.NS",
+            "l&t": "LT.NS",
+            "itc": "ITC.NS",
+            "bhel": "BHEL.NS",
+            "suzlon": "SUZLON.NS",
+            "polycab": "POLYCAB.NS",
+            "trent": "TRENT.NS",
+            "cdsl": "CDSL.NS",
+            "mazagon dock": "MAZDOCK.NS",
+            "apple": "AAPL",
+            "tesla": "TSLA",
+            "microsoft": "MSFT",
+            "nvidia": "NVDA",
+            "boeing": "BA",
+            "amazon": "AMZN",
+            "meta": "META",
+            "amd": "AMD",
+        }
+
         def extract_target_entity(q_str: str) -> str:
-            raw = (q_str or "").strip()
-            patterns = [
-                r"^.*?\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:plot|show|give|display|render|fetch|get|draw)\s*(?:me\s+)?(?:(?:a|an|the)\s+)?",
-                r"^.*?\b(?:give|show|plot|draw|display|provide|render|fetch|get|create)\s+(?:me\s+)?(?:(?:a|an|the)\s+)?",
-                r"^.*?\b(?:what\s+is\s+(?:the\s+)?(?:current\s+)?(?:price|chart|quote)\s+(?:of|for)\s+)",
+            raw = (q_str or "").strip().lower()
+            # A. Match known aliases first
+            for k in sorted(known_aliases.keys(), key=len, reverse=True):
+                if re.search(r"\b" + re.escape(k) + r"\b", raw):
+                    return k
+
+            # B. Strip analytical and conversational filler phrases
+            c = raw
+            fillers = [
+                r"\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:check|analyze|look\s+at|examine|inspect|plot|show|give|display|fetch|get|tell)\b",
+                r"\b(?:please\s+)?(?:check|analyze|look\s+at|examine|inspect|plot|show|give|display|provide|fetch|get|tell)\s*(?:me\s+)?",
+                r"\b(?:what\s+is\s+(?:the\s+)?(?:current\s+)?(?:price|chart|quote|trend|pattern|analysis)\s+(?:of|for)\s+)",
+                r"\b(?:patterns?\s+forming|chart\s*patterns?|patterns?|formations?)\b",
+                r"\b(?:technical\s+analysis|concise\s+report|in\s*depth\s*analysis|stock\s*analysis|text\s*answers?)\b",
                 r"\b(?:candlestick|candle\s*stick|ohlcv?|trading|stock|share|equity)\s+(?:charts?|grahps?|grpahs?|graphs?|plots?|data|prices?|quotes?)\b",
                 r"\b(?:candlestick|candle\s*stick|charts?|grahps?|grpahs?|graphs?|plots?|quotes?|prices?|shares?|stocks?)\b",
                 r"\b(?:1d|5d|1m|1mo|3m|3mo|6m|6mo|1y|1yr|1year|3y|5y|all)\s*(?:timeframe|horizon|chart|period)?\b",
                 r"\b(?:days?|months?|years?|daily|weekly|monthly)\b",
-                r"\b(?:about|the|a|an|please|boss|buddy|thanks|thank you)\b"
+                r"\b(?:about|the|a|an|and|for|of|on|in|to|with|forming)\b"
             ]
-            c = raw
-            for p in patterns:
+            for p in fillers:
                 c = re.sub(p, " ", c, flags=re.IGNORECASE)
-            c = re.sub(r"^(?:of|for|on|in|about)\s+", "", c.strip(), flags=re.IGNORECASE)
-            c = re.sub(r"\b\d+\s*$", "", c)
             c = re.sub(r"[^\w\s&\.]", " ", c)
             c = " ".join(c.split())
             return c
 
         entity = extract_target_entity(user_query)
-        if (len(entity) < 2 or entity.lower() in ("graph", "chart", "candle", "candlestick", "grpah")) and messages:
+        if (len(entity) < 2 or entity.lower() in ("graph", "chart", "candle", "candlestick", "grpah", "pattern", "patterns")) and messages:
             for m in reversed(messages):
                 if isinstance(m, dict) and m.get("role") == "user":
                     cand = extract_target_entity(str(m.get("content") or ""))
-                    if len(cand) >= 2 and cand.lower() not in ("graph", "chart", "candle", "candlestick", "grpah"):
+                    if len(cand) >= 2 and cand.lower() not in ("graph", "chart", "candle", "candlestick", "grpah", "pattern", "patterns"):
                         entity = cand
                         break
                 elif isinstance(m, dict) and m.get("role") == "assistant":
                     text = str(m.get("content") or "")
                     tm = re.search(r"\b([A-Z0-9&]{1,10}\.(?:NS|BO)|[A-Z]{2,5})\b", text)
-                    if tm and tm.group(1) not in ("NSE", "BSE", "USD", "INR", "HTTP", "JSON", "GET", "POST", "STEP"):
+                    if tm and tm.group(1) not in ("NSE", "BSE", "USD", "INR", "HTTP", "JSON", "GET", "POST", "STEP", "PTRN"):
                         entity = tm.group(1)
                         break
 
-        if not entity:
-            entity = user_query or "ARE&M.NS"
+        if not entity or entity.lower() in ("pattern", "patterns", "chart"):
+            entity = "google"
 
         # Resolve timeframe
         period = "1mo"
@@ -764,53 +818,13 @@ class AgentRuntimeEngine:
         try:
             import yfinance as yf
 
-            known_aliases = {
-                "zomato": "ETERNAL.NS",
-                "amarraja": "ARE&M.NS",
-                "amara raja": "ARE&M.NS",
-                "amarrather": "ARE&M.NS",
-                "eternal": "ETERNAL.NS",
-                "tata motors": "TMCV.NS",
-                "tata steel": "TATASTEEL.NS",
-                "tata power": "TATAPOWER.NS",
-                "tcs": "TCS.NS",
-                "infosys": "INFY.NS",
-                "wipro": "WIPRO.NS",
-                "hcl": "HCLTECH.NS",
-                "reliance": "RELIANCE.NS",
-                "state bank of india": "SBIN.NS",
-                "sbi": "SBIN.NS",
-                "hdfc": "HDFCBANK.NS",
-                "hdfc bank": "HDFCBANK.NS",
-                "icici": "ICICIBANK.NS",
-                "maruti": "MARUTI.NS",
-                "maruti suzuki": "MARUTI.NS",
-                "l&t": "LT.NS",
-                "itc": "ITC.NS",
-                "bhel": "BHEL.NS",
-                "suzlon": "SUZLON.NS",
-                "polycab": "POLYCAB.NS",
-                "trent": "TRENT.NS",
-                "cdsl": "CDSL.NS",
-                "mazagon dock": "MAZDOCK.NS",
-                "apple": "AAPL",
-                "tesla": "TSLA",
-                "microsoft": "MSFT",
-                "nvidia": "NVDA",
-                "boeing": "BA",
-                "amazon": "AMZN",
-                "google": "GOOGL",
-                "meta": "META",
-                "amd": "AMD",
-            }
-
             clean_ent = entity.strip()
             clean_lower = clean_ent.lower()
             candidates = []
 
             # A. Check known aliases
             for k, v in known_aliases.items():
-                if k == clean_lower or k in clean_lower:
+                if k == clean_lower or (len(k) >= 4 and k in clean_lower):
                     candidates.append(v)
                     break
 
@@ -940,6 +954,60 @@ class AgentRuntimeEngine:
             else:
                 mkt_cap_str = "N/A"
 
+            # Technical Pattern Recognition & Trend Analysis
+            patterns_detected = []
+            closes = [c["close"] for c in candles]
+            highs = [c["high"] for c in candles]
+            lows = [c["low"] for c in candles]
+
+            if len(candles) >= 3:
+                c2, c3 = candles[-2], candles[-1]
+                body3 = abs(c3["close"] - c3["open"])
+                rng3 = c3["high"] - c3["low"]
+                lower_shadow3 = min(c3["open"], c3["close"]) - c3["low"]
+                upper_shadow3 = c3["high"] - max(c3["open"], c3["close"])
+
+                # Candlestick Formations
+                if rng3 > 0 and (body3 / rng3) <= 0.15:
+                    patterns_detected.append("**Doji / Market Indecision**: Open and close are nearly identical, showing buyers and sellers in equilibrium.")
+                elif lower_shadow3 >= (2.0 * max(body3, 0.01)) and upper_shadow3 <= (0.4 * max(body3, 0.01)):
+                    if c3["close"] >= c3["open"]:
+                        patterns_detected.append("**Bullish Hammer**: Intraday selloff was aggressively rejected by dip buyers, signaling upside support.")
+                    else:
+                        patterns_detected.append("**Hanging Man**: High volatility with downward pressure testing recent support levels.")
+                elif upper_shadow3 >= (2.0 * max(body3, 0.01)) and lower_shadow3 <= (0.4 * max(body3, 0.01)):
+                    if c3["close"] < c3["open"]:
+                        patterns_detected.append("**Bearish Shooting Star**: Push higher met immediate supply resistance, signaling potential consolidation or pullback.")
+                    else:
+                        patterns_detected.append("**Inverted Hammer**: Buyers attempted a recovery push off support.")
+
+                if c3["close"] > c3["open"] and c2["close"] < c2["open"] and c3["close"] >= c2["open"] and c3["open"] <= c2["close"]:
+                    patterns_detected.append("**Bullish Engulfing**: Current green body completely engulfs prior session red body, indicating strong buyer takeover.")
+                elif c3["close"] < c3["open"] and c2["close"] > c2["open"] and c3["close"] <= c2["open"] and c3["open"] >= c2["close"]:
+                    patterns_detected.append("**Bearish Engulfing**: Current red body completely engulfs prior session green body, indicating distribution.")
+
+            # Swing & Range Structure
+            if len(closes) >= 5:
+                recent_high = max(highs[-5:])
+                recent_low = min(lows[-5:])
+                period_range = (recent_high - recent_low) / (closes[-1] if closes[-1] else 1.0)
+                if period_range < 0.035:
+                    patterns_detected.append(f"**Tight Consolidation Channel**: Price is coiling inside a narrow range ({curr}{recent_low:,.2f} - {curr}{recent_high:,.2f}), suggesting an imminent volatility expansion/breakout.")
+                elif closes[-1] > closes[-3] > closes[-5]:
+                    patterns_detected.append(f"**Ascending Structure (Higher Highs / Higher Lows)**: Consistent upward momentum sustaining above recent swing support of {curr}{recent_low:,.2f}.")
+                elif closes[-1] < closes[-3] < closes[-5]:
+                    patterns_detected.append(f"**Descending Structure (Lower Highs / Lower Lows)**: Sustained pullback facing resistance at {curr}{recent_high:,.2f}.")
+
+            if not patterns_detected:
+                patterns_detected.append(f"**Horizontal Range-Bound Consolidation**: Price oscillating around {curr}{last_price:,.2f} without high-probability reversal confirmation.")
+
+            # Support & Resistance Calculation
+            immediate_res = max(highs[-10:]) if len(highs) >= 10 else max(highs)
+            immediate_sup = min(lows[-10:]) if len(lows) >= 10 else min(lows)
+            sma_10 = round(sum(closes[-10:]) / len(closes[-10:]), 2) if len(closes) >= 10 else last_price
+
+            trend_stance = "Bullish" if last_price >= sma_10 else ("Consolidating / Neutral" if abs(last_price - sma_10) / sma_10 < 0.015 else "Cautious / Pullback")
+
             chart_json = json.dumps({
                 "symbol": symbol,
                 "period": period,
@@ -973,28 +1041,48 @@ class AgentRuntimeEngine:
                 })
                 await event_callback({"event": "step", "data": mcp_step.model_dump()})
 
-            return (
-                f"## {comp_name} ({exchange}: {symbol})\n\n"
-                f"Here is the real-time stock quote and interactive candlestick chart for **{comp_name}** (**{symbol}**):\n\n"
-                f"| Metric | Value |\n"
-                f"| :--- | :--- |\n"
-                f"| **Current Price** | {curr}{last_price:,.2f} |\n"
-                f"| **Day Change** | {chg_str} |\n"
-                f"| **Previous Close** | {curr}{prev_close:,.2f} |\n"
-                f"| **52-Week High** | {curr}{high_52:,.2f} |\n"
-                f"| **52-Week Low** | {curr}{low_52:,.2f} |\n"
-                f"| **Market Capitalization** | {mkt_cap_str} |\n"
-                f"| **Currency** | {fast.get('currency', 'INR' if is_indian else 'USD')} ({curr}) |\n"
-                f"| **Exchange** | {exchange} |\n\n"
-                f"```candlestick\n{chart_json}\n```\n\n"
-                f"### Summary & Key Takeaways\n"
-                f"- **Official Company Name**: {comp_name}\n"
-                f"- **Ticker Symbol**: `{symbol}` on {exchange}\n"
-                f"- **Currency**: {curr} ({fast.get('currency', 'INR' if is_indian else 'USD')})\n"
-                f"- **Current Price**: {curr}{last_price:,.2f}\n"
-                f"- **Timeframe**: {period.upper()} (Interval: {interval})\n"
-                f"- **Interactive Chart Controls**: Use the timeframe buttons directly above the chart (**1D**, **5D**, **1M**, **3M**, **6M**, **1Y**, **5Y**, **ALL**) to dynamically load candles. You can also scroll with your mouse wheel to zoom in/out, or click and drag across the chart canvas to pan historical price action."
-            )
+            # Check if user explicitly asked for text answers / concise report / no graph
+            no_graph_requested = any(w in all_user_lower for w in (
+                "no graph", "no chart", "don't want graph", "dont want graph", "don't want all the graph",
+                "dont want all the graph", "don't want the graph", "dont want the graph", "not always a graph",
+                "not a graph", "text answers", "text answer", "text only", "concise report", "i want some text answers"
+            ))
+
+            patterns_markdown = "\n".join(f"- {p}" for p in patterns_detected)
+
+            response_sections = [
+                f"## Technical & Pattern Analysis: {comp_name} ({exchange}: {symbol})\n",
+                "### 1. Executive Summary & Market Stance",
+                f"- **Overall Market Stance**: **{trend_stance}**",
+                f"- **Current Trading Price**: **{curr}{last_price:,.2f}** ({chg_str})",
+                f"- **10-Period Simple Moving Average (SMA)**: {curr}{sma_10:,.2f} ({'Trading above SMA' if last_price >= sma_10 else 'Trading below SMA'})",
+                f"- **52-Week Range**: {curr}{low_52:,.2f} — {curr}{high_52:,.2f}",
+                f"- **Market Capitalization**: {mkt_cap_str}\n",
+                "### 2. Technical Patterns Forming",
+                patterns_markdown + "\n",
+                "### 3. Key Support & Resistance Levels",
+                f"- **Immediate Resistance (Upper Ceiling)**: **{curr}{immediate_res:,.2f}** (Recent period swing high)",
+                f"- **Immediate Support (Lower Floor)**: **{curr}{immediate_sup:,.2f}** (Recent period swing low)",
+                f"- **Pivot Zone**: {curr}{round((immediate_res + immediate_sup + last_price) / 3, 2):,.2f}\n",
+                "### 4. Actionable Outlook & Key Takeaways",
+                f"- **Bullish Breakout Scenario**: A decisive daily close above **{curr}{immediate_res:,.2f}** with volume expansion confirms continuation towards higher targets.",
+                f"- **Risk & Defense Level**: Maintain stop-loss / risk defense below **{curr}{immediate_sup:,.2f}**; a drop below this level indicates breakdown into lower liquidity pools.",
+                f"- **Timeframe Evaluated**: {period.upper()} (Interval: {interval})\n"
+            ]
+
+            # If user wanted a chart, or did not explicitly reject graphs, provide interactive chart as visual complement
+            if not no_graph_requested:
+                response_sections.append("### 5. Interactive Candlestick Chart & Historical Price Action\n")
+                response_sections.append(f"```candlestick\n{chart_json}\n```\n")
+                response_sections.append(
+                    "> **Interactive Chart Controls**: Use the timeframe buttons directly above the chart (**1D**, **5D**, **1M**, **3M**, **6M**, **1Y**, **5Y**, **ALL**) to dynamically load candles. You can also scroll with your mouse wheel to zoom in/out, or click and drag across the chart canvas to pan historical price action."
+                )
+            else:
+                response_sections.append(
+                    "> *Note: Visual chart graph omitted as requested. Showing concise textual technical analysis report.*"
+                )
+
+            return "\n".join(response_sections)
         except Exception as e:  # noqa: BLE001
             print(f"[_fulfill_market_query_if_needed] Failed: {e}")
             return final_response
