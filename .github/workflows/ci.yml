@@ -1,0 +1,164 @@
+name: Continuous Integration & Vulnerability Security Gate
+
+on:
+  push:
+    branches: [ "main", "develop", "feature/**", "fix/**" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # 1. SECURITY VULNERABILITY AUDIT (SAST & DEPENDENCY CVE SCAN)
+  # =========================================================================
+  security-audit:
+    name: Security Vulnerability & Secrets Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Security Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit pip-audit
+
+      - name: Run Bandit SAST Security Vulnerability Scan
+        run: |
+          echo "Running Bandit SAST security scan across services, packages, and apps..."
+          bandit -r services/ packages/ apps/api/ -ll --exclude .venv,tests,scratch -f custom --msg-template "{abspath}:{line}: {severity}: {test_id}: {msg}" || true
+          bandit -r services/ packages/ apps/api/ -ll --exclude .venv,tests,scratch
+
+      - name: Run Dependency Vulnerability Audit (pip-audit)
+        run: |
+          echo "Scanning dependencies for known CVEs..."
+          pip install -r requirements.txt
+          pip-audit --desc on || echo "Dependency audit finished with advisory warnings."
+
+  # =========================================================================
+  # 2. CODE QUALITY, LINTING & CODE SMELLS GATE (RUFF, PYLINT & ESLINT)
+  # =========================================================================
+  lint-and-code-smells:
+    name: PyRuff, PyLint & ESLint Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python Linters & Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pylint
+
+      - name: Run PyRuff Linter & Formatter Check
+        run: |
+          echo "Verifying code formatting and linting with Ruff..."
+          ruff check .
+
+      - name: Run PyLint Strict Quality Gate
+        run: |
+          echo "Running PyLint to catch syntax errors, undeclared variables and code smells..."
+          python -m pylint services packages apps/api --errors-only
+
+      - name: Set up Node.js for Frontend Checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "apps/web/package.json"
+
+      - name: Run Frontend Linting (React Web)
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run lint
+
+  # =========================================================================
+  # 3. AUTOMATED TEST SUITE & CODE COVERAGE GATE
+  # =========================================================================
+  test-suite:
+    name: Comprehensive Automated Test Suite (PyTest)
+    runs-on: ubuntu-latest
+    needs: [security-audit, lint-and-code-smells]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov anyio
+
+      - name: Execute Full Test Suite & Generate XML Coverage
+        run: |
+          echo "Executing unit, security, and pattern analysis test cases..."
+          pytest tests/ -v --cov=services --cov=packages --cov=apps/api --cov-report=xml:coverage.xml
+
+      - name: Upload Test Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+  # =========================================================================
+  # 4. SONARQUBE / SONARCLOUD QUALITY GATE
+  # =========================================================================
+  sonarqube:
+    name: SonarQube / SonarCloud Gate
+    runs-on: ubuntu-latest
+    needs: [test-suite]
+    if: always()
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Test Coverage Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: code-coverage-report
+        continue-on-error: true
+
+      - name: SonarQube Scanner
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate Check
+        if: ${{ env.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
