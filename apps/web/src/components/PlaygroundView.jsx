@@ -375,7 +375,7 @@ export default function PlaygroundView({ agent = {}, initialThread = null }) {
     if (!parsedRows.length) return null;
 
     const headerRow = parsedRows[0] || [];
-    const isSeparator = (row) => row.every((c) => /^[-:\s]+$/.test(c));
+    const isSeparator = (row) => row.length > 0 && row.every((c) => c.length > 0 && c.replace(/[\s:-]/g, '') === '');
     const dataRows = parsedRows.slice(1).filter((row) => !isSeparator(row));
 
     // Detect OHLC columns for Candlestick visualization
@@ -580,7 +580,13 @@ export default function PlaygroundView({ agent = {}, initialThread = null }) {
           let parsedTitle = 'Market Candlesticks';
 
           try {
-            const parsed = JSON.parse(rawCode);
+            // Sanitize unquoted NaN, Infinity, -Infinity that can come from numpy/pandas serialization
+            const sanitizedCode = rawCode
+              .replace(/:\s*NaN\b/gi, ': null')
+              .replace(/:\s*Infinity\b/gi, ': null')
+              .replace(/:\s*-Infinity\b/gi, ': null');
+
+            const parsed = JSON.parse(sanitizedCode);
             if (Array.isArray(parsed) && parsed.length > 0 && ('open' in parsed[0] || 'Open' in parsed[0])) {
               parsedCandles = parsed;
             } else if (parsed && typeof parsed === 'object') {
@@ -589,14 +595,31 @@ export default function PlaygroundView({ agent = {}, initialThread = null }) {
               if (parsed.title) parsedTitle = parsed.title;
             }
           } catch {
-            // Not JSON
+            // Loose fallback extraction for chart blocks with minor formatting discrepancies
+            try {
+              const candleMatch = rawCode.match(/"candles"\s*:\s*(\[[^]*?\]\s*(?:,\s*"|\}))/);
+              if (candleMatch) {
+                const subStr = candleMatch[1].replace(/,\s*"[^"]*"\s*:.*$/, '').replace(/\}$/, '').trim();
+                const cleanedJson = subStr
+                  .replace(/:\s*NaN\b/gi, ': null')
+                  .replace(/:\s*Infinity\b/gi, ': null');
+                parsedCandles = JSON.parse(cleanedJson);
+              }
+            } catch {
+              // Not JSON
+            }
           }
 
-          if (parsedCandles && Array.isArray(parsedCandles) && parsedCandles.length > 0) {
+          // Filter out null/invalid candles
+          const cleanCandles = Array.isArray(parsedCandles)
+            ? parsedCandles.filter(c => c && typeof c === 'object' && c.open != null && c.close != null && !isNaN(Number(c.open)) && !isNaN(Number(c.close)))
+            : [];
+
+          if (cleanCandles.length > 0) {
             elements.push(
               <CandlestickChart
                 key={`candle-chart-${i}`}
-                data={parsedCandles}
+                data={cleanCandles}
                 symbol={parsedSymbol}
                 title={parsedTitle}
               />

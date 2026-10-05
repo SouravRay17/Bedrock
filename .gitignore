@@ -47,3 +47,8 @@ desktop.ini
 .agents/
 graphify-out/
 scratch/
+
+# Registry backups & temp files
+data/registry/backups/
+data/registry/*.backup.json
+data/registry/*.tmp

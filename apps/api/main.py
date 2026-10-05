@@ -468,44 +468,6 @@ async def ping_mcp_handshake(req: dict[str, Any]):
         "message": "Client MCP Gateway acknowledged Bearer authentication handshake."
     }
 
-@app.get("/api/v1/market/history")
-async def get_market_history(
-    symbol: str = Query(..., description="Stock ticker symbol (e.g. AAPL, MSFT)"),
-    period: str = Query("1mo", description="Horizon (1d, 5d, 1mo, 3mo, 6mo, 1y, 3y, 5y, max)"),
-    interval: str = Query("auto", description="Interval (1d, 1wk, 1mo, auto)")
-):
-    """
-    Direct high-performance market history endpoint for TradingView-style interactive charts.
-    Executes via registered market intel MCP or local fallback.
-    """
-    # 1. Try via MCP Router if market-intel collection exists
-    col_id = "col_market_intel"
-    collections = registry.list_mcp_collections()
-    for c in collections:
-        if "market" in c.slug or "market" in c.name or "intel" in c.slug:
-            col_id = c.collectionId
-            break
-
-    try:
-        res = await mcp_router.execute_mcp_tool(
-            collection_id=col_id,
-            tool_name="yfinance_get_historical_data",
-            tool_input={"symbol_or_name": symbol, "period": period, "interval": interval}
-        )
-        if isinstance(res, dict) and (res.get("candles") or res.get("data")):
-            return res
-    except Exception as e:
-        print(f"[MarketHistory] MCP route fallback: {e}")
-
-    # 2. Direct fallback via yfinance_client
-    try:
-        mcp_path = r"D:\Projects\MCPs\mcp-market-intel"
-        if mcp_path not in sys.path:
-            sys.path.insert(0, mcp_path)
-        from src.yfinance_client import get_historical_data  # pylint: disable=import-error,import-outside-toplevel
-        return get_historical_data(symbol, period=period, interval=interval)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch market history: {e}") from e
 
 @app.get("/api/v1/knowledge-bases")
 def list_knowledge_bases():

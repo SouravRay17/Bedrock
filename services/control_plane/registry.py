@@ -20,7 +20,9 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__
 os.makedirs(DATA_DIR, exist_ok=True)
 
 class RegistryService:
-    def __init__(self):
+    def __init__(self, data_dir: str | None = None):
+        self.data_dir = data_dir or os.environ.get("REGISTRY_DATA_DIR", DATA_DIR)
+        os.makedirs(self.data_dir, exist_ok=True)
         self._models: dict[str, ModelDefinition] = {}
         self._tools: dict[str, ToolDefinition] = {}
         self._mcp_servers: dict[str, MCPServerDefinition] = {}
@@ -173,28 +175,18 @@ class RegistryService:
                 "groups": {k: v.model_dump() for k, v in self._groups.items()},
                 "threads": {k: v.model_dump() for k, v in self._threads.items()}
             }
-            # 1. Primary persistence state
-            primary_path = os.path.join(DATA_DIR, "registry_state.json")
-            with open(primary_path, "w", encoding="utf-8") as f:
+            # Atomic persistence: write to temp file then replace
+            primary_path = os.path.join(self.data_dir, "registry_state.json")
+            temp_path = os.path.join(self.data_dir, "registry_state.json.tmp")
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
-
-            # 2. Mirror Backup Persistence
-            backup_path = os.path.join(DATA_DIR, "registry_state.backup.json")
-            with open(backup_path, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2)
-
-            # 3. Snapshot backup directory
-            backup_dir = os.path.join(DATA_DIR, "backups")
-            os.makedirs(backup_dir, exist_ok=True)
-            daily_path = os.path.join(backup_dir, f"registry_state_{time.strftime('%Y%m%d')}.json")
-            with open(daily_path, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2)
+            os.replace(temp_path, primary_path)
         except (OSError, json.JSONDecodeError, TypeError, ValueError, KeyError) as e:
             print(f"[RegistryService] Failed to save state: {e}")
 
     def _load_from_disk(self):
-        filepath = os.path.join(DATA_DIR, "registry_state.json")
-        backup_path = os.path.join(DATA_DIR, "registry_state.backup.json")
+        filepath = os.path.join(self.data_dir, "registry_state.json")
+        backup_path = os.path.join(self.data_dir, "registry_state.backup.json")
         target_path = filepath if os.path.exists(filepath) else (backup_path if os.path.exists(backup_path) else None)
         if not target_path:
             return

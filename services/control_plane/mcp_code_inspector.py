@@ -48,13 +48,19 @@ class MCPCodeInspector:
     def find_local_project_path(cls, slug_or_name: str) -> str | None:
         """Searches known directories for an MCP project folder matching slug or name."""
         clean_slug = slug_or_name.lower().replace(" ", "-").replace("_", "-")
-        candidates = [
-            os.path.join("D:\\Projects\\MCPs", clean_slug),
-            os.path.join("D:\\Projects\\MCPs", f"mcp-{clean_slug}"),
-            os.path.join("D:\\Projects", clean_slug),
-            os.path.join("D:\\Projects", f"mcp-{clean_slug}"),
-            os.path.join("D:\\Projects\\MCPs", clean_slug.replace("mcp-", "")),
+        base_dirs = [
+            os.environ.get("MCP_PROJECTS_DIR"),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "MCPs")),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")),
         ]
+        candidates = []
+        for b in base_dirs:
+            if b and os.path.isdir(b):
+                candidates.extend([
+                    os.path.join(b, clean_slug),
+                    os.path.join(b, f"mcp-{clean_slug}"),
+                    os.path.join(b, clean_slug.replace("mcp-", "")),
+                ])
         for path in candidates:
             if os.path.isdir(path):
                 return path
@@ -342,20 +348,6 @@ class MCPCodeInspector:
                 except (httpx.HTTPError, json.JSONDecodeError, ValueError) as e:
                     logger.debug("Failed candidate %s: %s", target_url, e)
 
-            # Quick local fallback if remote tunnel timed out or is down
-            fallback_candidates = [
-                r"D:\Projects\MCPs\mcp-market-intel\openapi.json",
-                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "..", "MCPs", "mcp-market-intel", "openapi.json")
-            ]
-            for fb_path in fallback_candidates:
-                if os.path.isfile(fb_path):
-                    try:
-                        with open(fb_path, encoding="utf-8") as f:  # noqa: ASYNC230
-                            data = json.load(f)
-                        if isinstance(data, dict) and "paths" in data:
-                            return cls.parse_openapi_spec_dict(data, default_prefix)
-                    except (OSError, json.JSONDecodeError) as err:
-                        logger.debug("Local openapi fallback failed: %s", err)
 
         return []
 
@@ -526,23 +518,6 @@ class MCPCodeInspector:
             if tools:
                 return tools
 
-        # 5. Local project fallback by name/slug or market-intel reference
-        local_market_paths = [
-            r"D:\Projects\MCPs\mcp-market-intel\openapi.json",
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "..", "MCPs", "mcp-market-intel", "openapi.json")
-        ]
-        if any(term in (slug_or_name or "").lower() or term in (server_url or "").lower() for term in ["yahoo", "market", "intel", "yfinance", "stock"]):
-            for p in local_market_paths:
-                norm_p = os.path.abspath(p)
-                if os.path.exists(norm_p):
-                    try:
-                        with open(norm_p, encoding="utf-8") as f:  # noqa: ASYNC230
-                            sdata = json.load(f)
-                        tools = cls.parse_openapi_spec_dict(sdata, default_prefix=sanitized_name)
-                        if tools:
-                            return tools
-                    except Exception as err:
-                        logger.debug("Fallback local market intel spec read failed: %s", err)
 
         if slug_or_name:
             detected = cls.find_local_project_path(slug_or_name)
@@ -748,15 +723,17 @@ class MCPCodeInspector:
 
     @classmethod
     def discover_local_mcps(cls) -> list[dict[str, Any]]:
-        r"""
-        Discovers all MCP servers and tool packages in local project directories:
-        - D:\Projects\MCPs
-        - D:\Projects (folders matching *mcp* or containing server.py with tools)
+        """
+        Discovers all MCP servers and tool packages in configured MCP project directories
+        or adjacent sibling projects.
         """
         discovered: list[dict[str, Any]] = []
         base_paths = [
-            r"D:\Projects\MCPs",
-            r"D:\Projects"
+            p for p in [
+                os.environ.get("MCP_PROJECTS_DIR"),
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "MCPs")),
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")),
+            ] if p and os.path.isdir(p)
         ]
 
         seen_paths: set[str] = set()
