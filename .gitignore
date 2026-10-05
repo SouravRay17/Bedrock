@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Dependencies
+node_modules/
+apps/web/node_modules/
+
+# Build artifacts & distribution
+dist/
+build/
+apps/web/dist/
+apps/web/build/
+
+# Testing & Coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+test-reports/
+apps/web/coverage/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Agent & Workspace Cache
+.agents/
+graphify-out/
+scratch/

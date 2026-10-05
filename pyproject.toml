@@ -1,0 +1,40 @@
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [
+    ".git",
+    "__pycache__",
+    "dist",
+    "node_modules",
+    "data",
+    ".agents",
+    "graphify-out",
+    ".pytest_cache",
+    ".ruff_cache",
+    "scratch",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/main.py" = ["E402"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --import-mode=importlib"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["services", "packages", "apps/api"]
+omit = [
+    "tests/*",
+    "*/__pycache__/*",
+    "data/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

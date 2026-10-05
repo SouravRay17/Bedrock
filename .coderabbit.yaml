@@ -1,0 +1,91 @@
+# =====================================================================
+# CodeRabbit AI Code Review Configuration
+# Amazon BedRock AgentOS Studio
+# =====================================================================
+
+version: "2"
+language: "en-US"
+early_access: true
+
+reviews:
+  # 'assertive' profile enforces strict security, architectural correctness, and prevents vulnerabilities
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "master"
+      - "develop"
+
+  # Static Analysis and Security Linters
+  tools:
+    ruff:
+      enabled: true
+    pylint:
+      enabled: true
+    eslint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    markdownlint:
+      enabled: true
+
+  # Repository-Wide Review Guidance
+  instructions: |
+    You are an expert Principal Security Engineer and Cloud Architect reviewing changes for the Amazon BedRock AgentOS Studio.
+    Follow these critical non-negotiable guidelines:
+    
+    1. ZERO RAW HTML OUTPUT:
+       - The Agent runtime and playground MUST produce and render pure GitHub-flavored Markdown (.md).
+       - Never emit or accept raw HTML (<div, <span, <table, <p>, <ul>, <li>) in LLM responses, trace logs, or UI exports.
+       - Any user-facing response must be pure Markdown (.md).
+    
+    2. SECURITY & VULNERABILITY PREVENTIONS (OWASP Top 10 & LLM Top 10):
+       - Prevent SSRF (Server-Side Request Forgery) in tool endpoints, MCP server URLs, and HTTP dispatchers.
+       - Prevent Prompt Injection: Sanitize user messages, tool outputs, and knowledge base chunks before re-injecting into LLM context.
+       - Prevent Secrets Leakage: Ensure AWS credentials, Bearer tokens, and Group variables are masked and never written to traces, logs, or sent in WebSocket streams.
+       - Avoid eval(), exec(), and unsafe deserialization (pickle, yaml.load). Use safe alternatives (ast.literal_eval, json.loads, yaml.safe_load).
+    
+    3. STATE PERSISTENCE & DATA INTEGRITY:
+       - Every created Agent, Tool, MCP Collection, and Workspace Group must be saved persistently to disk registry state.
+       - Server boot sequence must load existing state BEFORE any initialization to prevent overwriting user data.
+    
+    4. WEBSOCKET & CONCURRENCY RESILIENCE:
+       - Gracefully handle WebSocket client disconnections (ECONNABORTED, 1000, 1001) without crashing ASGI loops or throwing uncaught duplicate close exceptions.
+    
+    5. COMPLIANCE WITH AGENTS.MD:
+       - Verify that Ruff (`ruff check .`), PyLint (`pylint --errors-only`), and frontend build/lint pass cleanly with zero errors.
+
+  path_instructions:
+    - path: "services/runtime/**"
+      instructions: |
+        Focus on:
+        - Strict Markdown (.md) formatting enforcement in LLM output.
+        - Tool execution timeout limits and error sandboxing.
+        - Safe handling of AWS Bedrock Converse and streaming API errors.
+
+    - path: "services/control_plane/**"
+      instructions: |
+        Focus on:
+        - Atomic file persistence for registry_state.json.
+        - Safe AST inspection in MCPCodeInspector without executing untrusted external code.
+        - Proper schema generation for AWS Bedrock Converse tool specifications.
+
+    - path: "apps/web/**"
+      instructions: |
+        Focus on:
+        - Clean React component state management.
+        - Markdown rendering security (XSS prevention).
+        - Vite proxy error handling for WebSocket streams.
+
+chat:
+  auto_reply: true

@@ -1,0 +1,128 @@
+{
+  "models": {
+    "amazon.nova-micro-v1:0": {
+      "modelId": "amazon.nova-micro-v1:0",
+      "provider": "bedrock",
+      "displayName": "Amazon Nova Micro (Zero-Cost / Free-Tier Eligible)",
+      "description": "Ultra-fast, lightweight foundation model with native tool-calling and low inference overhead.",
+      "maxContextTokens": 128000,
+      "pricingTier": "FREE_TIER_ELIGIBLE",
+      "supportsToolCalling": true,
+      "supportsVision": false,
+      "defaultInferenceParams": {
+        "temperature": 0.1,
+        "topP": 0.9,
+        "maxTokens": 2048
+      }
+    },
+    "amazon.nova-lite-v1:0": {
+      "modelId": "amazon.nova-lite-v1:0",
+      "provider": "bedrock",
+      "displayName": "Amazon Nova Lite (High Speed & Multimodal)",
+      "description": "Cost-effective high-speed multimodal model with rich tool-calling and reasoning.",
+      "maxContextTokens": 300000,
+      "pricingTier": "FREE_TIER_ELIGIBLE",
+      "supportsToolCalling": true,
+      "supportsVision": false,
+      "defaultInferenceParams": {
+        "temperature": 0.1,
+        "topP": 0.9,
+        "maxTokens": 4096
+      }
+    },
+    "amazon.nova-pro-v1:0": {
+      "modelId": "amazon.nova-pro-v1:0",
+      "provider": "bedrock",
+      "displayName": "Amazon Nova Pro (Complex Reasoning & Coding)",
+      "description": "Flagship multimodal foundation model optimized for multi-step reasoning, agents, and coding.",
+      "maxContextTokens": 300000,
+      "pricingTier": "LOW_COST",
+      "supportsToolCalling": true,
+      "supportsVision": false,
+      "defaultInferenceParams": {
+        "temperature": 0.1,
+        "topP": 0.9,
+        "maxTokens": 4096
+      }
+    },
+    "amazon.titan-text-lite-v1": {
+      "modelId": "amazon.titan-text-lite-v1",
+      "provider": "bedrock",
+      "displayName": "Amazon Titan Text Lite (Free-Tier Eligible)",
+      "description": "Cost-effective text model suitable for summarization and lightweight classification tasks.",
+      "maxContextTokens": 4096,
+      "pricingTier": "FREE_TIER_ELIGIBLE",
+      "supportsToolCalling": false,
+      "supportsVision": false,
+      "defaultInferenceParams": {
+        "temperature": 0.2,
+        "topP": 0.9,
+        "maxTokens": 1024
+      }
+    },
+    "anthropic.claude-3-5-sonnet": {
+      "modelId": "anthropic.claude-3-5-sonnet",
+      "provider": "bedrock",
+      "displayName": "Claude 3.5 Sonnet (State-of-the-art)",
+      "description": "Industry-leading intelligence for coding, complex multi-agent workflows, and analysis.",
+      "maxContextTokens": 200000,
+      "pricingTier": "PAID",
+      "supportsToolCalling": true,
+      "supportsVision": false,
+      "defaultInferenceParams": {
+        "temperature": 0.1,
+        "topP": 0.9,
+        "maxTokens": 4096
+      }
+    }
+  },
+  "tools": {},
+  "mcp_servers": {},
+  "mcp_collections": {},
+  "knowledge_bases": {},
+  "agents": {},
+  "agent_versions": {},
+  "groups": {
+    "grp_default": {
+      "id": "grp_default",
+      "name": "Default Workspace",
+      "type": "Group",
+      "slug": "default-workspace",
+      "description": "Primary workspace for managing custom agents, tools, MCP collections, and knowledge bases.",
+      "createdAt": "2026-09-14",
+      "owner": {
+        "name": "Admin User",
+        "email": "admin@agentos.io",
+        "role": "Owner",
+        "avatar": "AD"
+      },
+      "maintainers": [],
+      "members": [
+        {
+          "name": "Admin User",
+          "email": "admin@agentos.io",
+          "role": "Owner",
+          "avatar": "AD"
+        }
+      ],
+      "variables": [],
+      "children": {
+        "agents": [],
+        "models": [],
+        "tools": [],
+        "mcps": [],
+        "collections": [],
+        "knowledge": []
+      },
+      "services": [
+        {
+          "name": "Amazon Bedrock Runtime",
+          "identifier": "amazon.nova-micro-v1:0",
+          "status": "Active (Free-Tier Eligible)"
+        }
+      ],
+      "policies": []
+    }
+  },
+  "threads": {}
+}
