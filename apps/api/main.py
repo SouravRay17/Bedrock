@@ -1,11 +1,13 @@
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from typing import Any
 
 import boto3
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,13 +25,16 @@ from packages.agent_spec.models import (
     GroupDefinition,
     KnowledgeBaseDefinition,
     MCPCollection,
+    MCPIntegration,
     MCPServerDefinition,
     ModelDefinition,
     ThreadMessage,
     ThreadSession,
     ToolDefinition,
 )
+from services.control_plane.integration_registry import integration_registry
 from services.control_plane.mcp_code_inspector import MCPCodeInspector
+from services.control_plane.mcp_discovery import mcp_discovery
 from services.control_plane.nl_builder import NaturalLanguageAgentBuilder
 from services.control_plane.registry import registry
 from services.runtime.agent_loop import runtime_engine
@@ -233,6 +238,80 @@ def delete_tool(tool_id: str):
     if not success:
         raise HTTPException(status_code=404, detail=f"Tool '{tool_id}' not found.")
     return {"deleted": True, "toolId": tool_id}
+
+
+# --- First-Class MCP Integration APIs ---
+@app.get("/api/v1/integrations")
+def list_integrations():
+    return integration_registry.list_integrations()
+
+@app.post("/api/v1/integrations")
+def create_integration(integration: MCPIntegration):
+    return integration_registry.register_integration(integration)
+
+@app.get("/api/v1/integrations/{integration_id}")
+def get_integration(integration_id: str):
+    item = integration_registry.get_integration(integration_id)
+    if not item:
+        raise HTTPException(status_code=404, detail=f"Integration '{integration_id}' not found.")
+    return item
+
+@app.put("/api/v1/integrations/{integration_id}")
+def update_integration(integration_id: str, integration: MCPIntegration):
+    integration.id = integration_id
+    return integration_registry.register_integration(integration)
+
+@app.delete("/api/v1/integrations/{integration_id}")
+def delete_integration(integration_id: str):
+    success = integration_registry.delete_integration(integration_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Integration '{integration_id}' not found.")
+    return {"deleted": True, "integrationId": integration_id}
+
+@app.post("/api/v1/integrations/{integration_id}/discover")
+async def discover_integration_tools(integration_id: str):
+    try:
+        result = await mcp_discovery.discover_mcp(integration_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+@app.get("/api/v1/integrations/{integration_id}/tools")
+def get_integration_tools(integration_id: str):
+    item = integration_registry.get_integration(integration_id)
+    if not item:
+        raise HTTPException(status_code=404, detail=f"Integration '{integration_id}' not found.")
+    return {
+        "integrationId": item.id,
+        "name": item.name,
+        "toolsCount": len(item.discoveredTools),
+        "tools": item.discoveredTools
+    }
+
+@app.get("/api/v1/integrations/{integration_id}/health")
+async def check_integration_health(integration_id: str):
+    item = integration_registry.get_integration(integration_id)
+    if not item:
+        raise HTTPException(status_code=404, detail=f"Integration '{integration_id}' not found.")
+    base_url = re.sub(r"/(sse|messages|health|openapi\.json)$", "", item.endpoint.rstrip("/"))
+    health_url = f"{base_url}/health"
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            resp = await client.get(health_url)
+            return {
+                "integrationId": item.id,
+                "status": "HEALTHY" if resp.status_code == 200 else "DEGRADED",
+                "statusCode": resp.status_code,
+                "endpoint": item.endpoint,
+                "details": resp.json() if resp.status_code == 200 else resp.text
+            }
+        except Exception as exc:
+            return {
+                "integrationId": item.id,
+                "status": "UNREACHABLE",
+                "endpoint": item.endpoint,
+                "error": str(exc)
+            }
 
 # --- MCP & OpenAPI Collection Inspection & Registry ---
 @app.get("/api/v1/mcp-servers")

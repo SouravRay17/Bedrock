@@ -1,14 +1,20 @@
+"""
+Natural Language Agent Builder for AgentOS Control Plane.
+Translates conversational user requests into an AgentDefinition attached to Integration & Tool catalogs.
+"""
+
 import uuid
 from typing import Any
 
 from packages.agent_spec.models import AgentDefinition
+from services.control_plane.integration_registry import integration_registry
 from services.control_plane.registry import registry
 
 
 class NaturalLanguageAgentBuilder:
     """
-    Translates natural-language intent into a proposed declarative AgentDefinition.
-    Does NOT hard-code vertical templates; matches generic primitives from the Registry.
+    Translates natural-language intent into an AgentDefinition referencing
+    first-class Integrations and Reusable Tools.
     """
 
     @classmethod
@@ -17,58 +23,56 @@ class NaturalLanguageAgentBuilder:
 
         # 1. Generate identity & role
         title = "Custom Autonomous Assistant"
-        if "research" in prompt_lower:
+        if "market" in prompt_lower or "stock" in prompt_lower or "equity" in prompt_lower or "portfolio" in prompt_lower or "finance" in prompt_lower:
+            title = "Market Intelligence & Portfolio Risk Auditor"
+        elif "research" in prompt_lower:
             title = "Research & Synthesis Agent"
-        elif "invoice" in prompt_lower or "finance" in prompt_lower or "budget" in prompt_lower:
+        elif "invoice" in prompt_lower or "budget" in prompt_lower:
             title = "Financial & Invoice Auditor"
-        elif "support" in prompt_lower or "customer" in prompt_lower:
+        elif "customer" in prompt_lower or "support" in prompt_lower:
             title = "Customer Operations Specialist"
         elif "devops" in prompt_lower or "code" in prompt_lower or "git" in prompt_lower:
             title = "DevOps & Engineering Agent"
-        elif "travel" in prompt_lower:
-            title = "Travel & Itinerary Planner"
         else:
-            # Derive title from first few words
             words = [w.capitalize() for w in user_prompt.split()[:4] if len(w) > 2]
             if words:
                 title = f"{' '.join(words)} Agent"
 
-        # 2. Select default zero-cost model
+        # 2. Select default model
         free_models = registry.list_models(free_tier_only=True)
         selected_model = free_models[0].modelId if free_models else "amazon.nova-micro-v1:0"
 
-        # 3. Match Tools from Registry
-        matched_tools: list[str] = []
-        if any(w in prompt_lower for w in ["search", "web", "lookup", "browse", "google", "find"]):
-            matched_tools.append("tool_web_search")
-        if any(w in prompt_lower for w in ["calculate", "math", "tax", "cost", "sum", "price", "budget", "invoice"]):
-            matched_tools.append("tool_calculator")
-        if any(w in prompt_lower for w in ["api", "http", "fetch", "webhook", "rest"]):
-            matched_tools.append("tool_http_requester")
+        # 3. Match from Integration Registry
+        matched_integration_ids: list[str] = []
+        matched_tool_ids: list[str] = []
+        available_integrations = integration_registry.list_integrations()
 
-        # 4. Match MCP Collections
-        matched_mcp: list[str] = []
-        if any(w in prompt_lower for w in ["git", "github", "jira", "ticket", "issue", "repo", "pr"]):
-            matched_mcp.append("mcp_col_engineering")
+        for integ in available_integrations:
+            integ_text = f"{integ.id} {integ.name} {integ.description}".lower()
+            if (integ.id == "market-intel" and any(w in prompt_lower for w in ["stock", "equity", "quote", "portfolio", "candle", "yfinance", "market"])) or any(w in integ_text for w in prompt_lower.split() if len(w) > 3):
+                matched_integration_ids.append(integ.id)
+                matched_tool_ids.extend([f"{integ.id}.{t}" for t in integ.whitelistedToolNames])
 
-        # 5. Match Knowledge Bases
+        # Deduplicate
+        matched_integration_ids = list(set(matched_integration_ids))
+        matched_tool_ids = list(set(matched_tool_ids))
+
+        # 4. Match Knowledge Bases
         matched_kb: list[str] = []
         if any(w in prompt_lower for w in ["policy", "document", "sop", "internal", "manual", "handbook", "guideline"]):
             matched_kb.append("kb_sample_enterprise_docs")
 
-        # 6. Synthesize Instructions
+        # 5. Synthesize Instructions
         instructions = (
-            f"You are {title}. Your core objective is: {user_prompt.strip()}\n\n"
+            f"You are {title}. Your core mission is: {user_prompt.strip()}\n\n"
             "Operating Guidelines:\n"
-            "1. Analyze the user request thoroughly and determine required actions.\n"
-            "2. Utilize your attached tools and knowledge bases when precise facts, calculations, or external data are needed.\n"
-            "3. If delegating to child agents, specify clear and concise inputs.\n"
-            "4. Provide well-structured, clear, and actionable responses."
+            "1. Leverage attached MCP integrations and tools whenever precise data, calculations, or real-time metrics are needed.\n"
+            "2. When analyzing financial portfolios or stock tickers, execute the appropriate market-intel tools to verify quotes, historical candles, and beta risks.\n"
+            "3. Format all analytical outputs strictly in clean GitHub-flavored Markdown with structured tables and clear conclusions."
         )
 
         agent_id = f"agent_{uuid.uuid4().hex[:8]}"
 
-        # 7. Construct Agent Definition
         proposed_agent = AgentDefinition(
             agentId=agent_id,
             projectId=project_id,
@@ -79,33 +83,16 @@ class NaturalLanguageAgentBuilder:
                 "provider": "bedrock",
                 "modelId": selected_model
             },
-            inputs={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Primary goal or input data"}
-                },
-                "required": ["query"]
-            },
-            outputs={
-                "type": "object",
-                "properties": {
-                    "response": {"type": "string", "description": "Final summarized output"},
-                    "confidence": {"type": "number"}
-                }
-            },
-            tools=matched_tools,
-            mcpCollections=matched_mcp,
-            knowledgeBases=matched_kb,
-            childAgents=[]
+            integration_ids=matched_integration_ids,
+            tool_ids=matched_tool_ids,
+            tools=matched_tool_ids, # compatibility
+            knowledgeBases=matched_kb
         )
 
         return {
-            "proposedAgent": proposed_agent,
-            "rationale": {
-                "matchedTools": matched_tools,
-                "matchedMCPCollections": matched_mcp,
-                "matchedKnowledgeBases": matched_kb,
-                "selectedModel": selected_model,
-                "reasoning": f"Derived blueprint matching your request for '{title}'. Configured with zero-cost model '{selected_model}' and {len(matched_tools)} tools."
-            }
+            "proposalId": f"prop_{uuid.uuid4().hex[:6]}",
+            "userPrompt": user_prompt,
+            "agent": proposed_agent.model_dump(),
+            "matchedIntegrations": [i.model_dump() for i in available_integrations if i.id in matched_integration_ids],
+            "matchedToolsCount": len(matched_tool_ids)
         }

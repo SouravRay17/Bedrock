@@ -7,6 +7,8 @@ import AgentDetailView from './components/AgentDetailView';
 import CreateToolView from './components/CreateToolView';
 import ToolDetailView from './components/ToolDetailView';
 import WorkspaceView from './components/WorkspaceView';
+import IntegrationsView from './components/IntegrationsView';
+import IntegrationDetailView from './components/IntegrationDetailView';
 import PlaygroundView from './components/PlaygroundView';
 import McpDetailView from './components/McpDetailView';
 import KnowledgeBaseDetailView from './components/KnowledgeBaseDetailView';
