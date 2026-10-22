@@ -96,6 +96,26 @@ class MCPCollection(BaseModel):
     createdAt: float = Field(default_factory=time.time)
 
 # --- Group & Scoped Workspace Entities ---
+
+# --- First-Class MCP Integration Entity ---
+class MCPIntegration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: str = Field(..., description="Unique identifier for the integration (e.g. market-intel)")
+    name: str = Field(..., description="Human readable name of the integration")
+    type: str = Field("mcp", description="Integration type: mcp | openapi | custom")
+    endpoint: str = Field(..., description="Current connection endpoint (e.g. http://localhost:8001/sse)")
+    environment: str = Field("sandbox", description="Environment: sandbox | staging | production")
+    version: str = Field("1.0.0", description="Version of the MCP service")
+    commit: str | None = Field(None, description="Git commit hash or build artifact id")
+    status: str = Field("ready", description="Status: ready | connecting | error | disabled")
+    credential_ref: str | None = Field(None, description="Reference key for credentials (e.g. market-intel-token)")
+    description: str = Field("", description="Overview of capabilities provided by this integration")
+    discoveredTools: list[dict[str, Any]] = Field(default_factory=list, description="Catalog of discovered tools from this integration")
+    whitelistedToolNames: list[str] = Field(default_factory=list, description="Enabled tools for agent consumption")
+    lastSyncedAt: float | None = None
+    createdAt: float = Field(default_factory=time.time)
+    updatedAt: float = Field(default_factory=time.time)
+
 class VariableDefinition(BaseModel):
     model_config = ConfigDict(extra="allow")
     key: str
@@ -209,8 +229,10 @@ class AgentDefinition(BaseModel):
             "response": {"type": "string"}
         }
     })
-    tools: list[str] = Field(default_factory=list, description="Tool IDs")
-    mcpCollections: list[str] = Field(default_factory=list, description="MCP Collection IDs")
+    integration_ids: list[str] = Field(default_factory=list, description="Referenced MCP Integration IDs (e.g. ['market-intel'])")
+    tool_ids: list[str] = Field(default_factory=list, description="Referenced Tool IDs (e.g. ['market-intel.portfolio_live_analysis'])")
+    tools: list[str] = Field(default_factory=list, description="Tool IDs (legacy compatibility)")
+    mcpCollections: list[str] = Field(default_factory=list, description="MCP Collection IDs (legacy compatibility)")
     knowledgeBases: list[str] = Field(default_factory=list, description="Knowledge Base IDs")
     childAgents: list[ChildAgentContract] = Field(default_factory=list)
     memory: MemoryConfig = Field(default_factory=MemoryConfig)

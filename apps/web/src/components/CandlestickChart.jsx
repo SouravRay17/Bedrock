@@ -1,16 +1,26 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
+export const GRAPH_TYPES = [
+  { id: 'candles', label: 'Japanese Candlesticks', shortLabel: 'Candles', icon: 'candlestick_chart', desc: 'Classical OHLC real bodies & wicks' },
+  { id: 'hollow', label: 'Hollow / Heikin-Ashi', shortLabel: 'Heikin-Ashi', icon: 'tune', desc: 'Smoothed trend & momentum visualization' },
+  { id: 'line', label: 'Area / Mountain Line', shortLabel: 'Line', icon: 'show_chart', desc: 'Continuous closing curve with glowing gradient' },
+  { id: 'bars', label: 'OHLC Bar Chart', shortLabel: 'Bars', icon: 'stacked_bar_chart', desc: 'Western tick bars (left Open, right Close)' },
+  { id: 'baseline', label: 'Baseline Deviation', shortLabel: 'Baseline', icon: 'waterfall_chart', desc: 'Color-coded deviation above & below mean' },
+  { id: 'range', label: 'High-Low Volatility Band', shortLabel: 'Range Band', icon: 'analytics', desc: 'Intraday spread corridor with median line' },
+  { id: 'table', label: 'Tabular Data Matrix', shortLabel: 'Table', icon: 'table_rows', desc: 'Detailed numeric OHLCV records' },
+];
+
 /**
  * TradingView-Style Interactive Candlestick & Multi-Horizon Financial Chart
  * Native React + SVG, zero external dependencies.
  * Features:
  * - Live Timeframe Bar: [ 1D ] [ 5D ] [ 1M ] [ 3M ] [ 6M ] [ 1Y ] [ 5Y ] [ ALL ]
+ * - Interactive Graph Types Dropdown (Candles, Heikin-Ashi, Line, Bars, Baseline, Range, Table)
  * - Dynamic On-Demand Data Fetching on Tab Click
  * - Interactive Mouse Wheel Zoom & Drag-to-Pan (TradingView style)
  * - Dedicated Zoom Controls (+ / - / Reset)
  * - Fullscreen Expand Mode
  * - Crosshair with Y-axis Price Tag & X-axis Date Tag
- * - Area Line & Table Toggle
  */
 export default function CandlestickChart({
   data = [],
@@ -22,7 +32,8 @@ export default function CandlestickChart({
   const [activePeriod, setActivePeriod] = useState(period.toLowerCase());
   const [candlesData, setCandlesData] = useState(data);
   const [loadingTimeframe, setLoadingTimeframe] = useState(false);
-  const [viewMode, setViewMode] = useState('candles'); // 'candles' | 'line' | 'table'
+  const [viewMode, setViewMode] = useState('candles'); // 'candles' | 'hollow' | 'line' | 'bars' | 'baseline' | 'range' | 'table'
+  const [showGraphDropdown, setShowGraphDropdown] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -34,6 +45,25 @@ export default function CandlestickChart({
   const [dragStartX, setDragStartX] = useState(0);
 
   const containerRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  const activeGraphType = useMemo(
+    () => GRAPH_TYPES.find((gt) => gt.id === viewMode) || GRAPH_TYPES[0],
+    [viewMode]
+  );
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowGraphDropdown(false);
+      }
+    }
+    if (showGraphDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showGraphDropdown]);
 
   const currencySymbol = useMemo(() => {
     const s = String(symbol || '').toUpperCase();
@@ -53,8 +83,8 @@ export default function CandlestickChart({
     }
   }, [data]);
 
-  // Dynamic timeframe fetcher on tab click
-  const fetchTimeframe = useCallback(async (selectedPeriod) => {
+  // Dynamic timeframe filter on tab click
+  const fetchTimeframe = useCallback((selectedPeriod) => {
     setActivePeriod(selectedPeriod);
     setLoadingTimeframe(true);
     setHoveredIndex(null);
@@ -62,35 +92,40 @@ export default function CandlestickChart({
     setPanOffset(0);
 
     try {
-      const cleanSym = (symbol || 'AAPL').toUpperCase().trim();
-      const res = await fetch(`/api/v1/market/history?symbol=${encodeURIComponent(cleanSym)}&period=${selectedPeriod}&interval=auto`);
-      if (res.ok) {
-        const json = await res.json();
-        const incoming = json.candles || json.data || [];
-        if (Array.isArray(incoming) && incoming.length > 0) {
-          setCandlesData(incoming);
-        }
+      if (Array.isArray(data) && data.length > 0) {
+        const periodLimits = {
+          '5d': 5,
+          '1mo': 22,
+          '3mo': 66,
+          '6mo': 130,
+          '1y': 252,
+          'all': data.length
+        };
+        const limit = periodLimits[selectedPeriod] || data.length;
+        const sliced = data.slice(Math.max(0, data.length - limit));
+        setCandlesData(sliced.length > 0 ? sliced : data);
       }
     } catch (err) {
-      console.error('Failed to fetch market timeframe:', err);
+      console.error('Failed to filter timeframe:', err);
     } finally {
       setLoadingTimeframe(false);
     }
-  }, [symbol]);
+  }, [data]);
 
   // Normalize raw candles
   const allCandles = useMemo(() => {
     if (!Array.isArray(candlesData)) return [];
     return candlesData
       .map((item, idx) => {
+        if (!item || typeof item !== 'object') return null;
         const rawDate = item.date || item.Date || item.time || item.timestamp || `Bar ${idx + 1}`;
-        const open = parseFloat(String(item.open ?? item.Open ?? 0).replace(/[$,]/g, ''));
-        const high = parseFloat(String(item.high ?? item.High ?? 0).replace(/[$,]/g, ''));
-        const low = parseFloat(String(item.low ?? item.Low ?? 0).replace(/[$,]/g, ''));
-        const close = parseFloat(String(item.close ?? item.Close ?? 0).replace(/[$,]/g, ''));
+        const open = parseFloat(String(item.open ?? item.Open ?? '').replace(/[$,]/g, ''));
+        const high = parseFloat(String(item.high ?? item.High ?? '').replace(/[$,]/g, ''));
+        const low = parseFloat(String(item.low ?? item.Low ?? '').replace(/[$,]/g, ''));
+        const close = parseFloat(String(item.close ?? item.Close ?? '').replace(/[$,]/g, ''));
         const volume = parseFloat(String(item.volume ?? item.Volume ?? 0).replace(/[$,]/g, ''));
 
-        if (isNaN(open) || isNaN(close)) return null;
+        if (isNaN(open) || isNaN(close) || open === null || close === null) return null;
 
         const isBullish = close >= open;
         const change = close - open;
@@ -100,10 +135,10 @@ export default function CandlestickChart({
           id: idx,
           date: String(rawDate).split('T')[0],
           open,
-          high: isNaN(high) ? Math.max(open, close) : high,
-          low: isNaN(low) ? Math.min(open, close) : low,
+          high: isNaN(high) || high === null ? Math.max(open, close) : high,
+          low: isNaN(low) || low === null ? Math.min(open, close) : low,
           close,
-          volume: isNaN(volume) ? 0 : volume,
+          volume: isNaN(volume) || volume === null ? 0 : volume,
           isBullish,
           change,
           changePercent,
@@ -210,6 +245,44 @@ export default function CandlestickChart({
     ? `M ${linePoints[0]} L ${linePoints.join(' L ')} L ${
         (count - 1) * candleSpacing + candleSpacing / 2
       },${chartHeight} L ${candleSpacing / 2},${chartHeight} Z`
+    : '';
+
+  // Heikin-Ashi smoothed candles calculation
+  const heikinAshiCandles = useMemo(() => {
+    if (!visibleCandles.length) return [];
+    const ha = [];
+    for (let i = 0; i < visibleCandles.length; i++) {
+      const c = visibleCandles[i];
+      const haClose = (c.open + c.high + c.low + c.close) / 4;
+      const haOpen = i === 0 ? (c.open + c.close) / 2 : (ha[i - 1].open + ha[i - 1].close) / 2;
+      const haHigh = Math.max(c.high, haOpen, haClose);
+      const haLow = Math.min(c.low, haOpen, haClose);
+      const isBullish = haClose >= haOpen;
+      ha.push({
+        ...c,
+        open: haOpen,
+        close: haClose,
+        high: haHigh,
+        low: haLow,
+        isBullish,
+      });
+    }
+    return ha;
+  }, [visibleCandles]);
+
+  // Baseline mean price calculation
+  const meanBaselinePrice = useMemo(() => {
+    if (!visibleCandles.length) return 0;
+    return visibleCandles.reduce((acc, c) => acc + c.close, 0) / visibleCandles.length;
+  }, [visibleCandles]);
+
+  // Range corridor (High-Low volatility envelope)
+  const rangeHighPoints = visibleCandles.map((c, i) => `${i * candleSpacing + candleSpacing / 2},${getY(c.high)}`);
+  const rangeLowPoints = visibleCandles.map((c, i) => `${i * candleSpacing + candleSpacing / 2},${getY(c.low)}`);
+  const rangeHighPath = rangeHighPoints.length ? `M ${rangeHighPoints.join(' L ')}` : '';
+  const rangeLowPath = rangeLowPoints.length ? `M ${rangeLowPoints.join(' L ')}` : '';
+  const rangeBandPolygon = rangeHighPoints.length
+    ? `M ${rangeHighPoints.join(' L ')} L ${rangeLowPoints.slice().reverse().join(' L ')} Z`
     : '';
 
   // Zoom handlers
@@ -358,35 +431,109 @@ export default function CandlestickChart({
             )}
           </div>
 
-          {/* Chart Mode */}
-          <div className="flex items-center gap-1 rounded-lg bg-surface-container-low p-0.5 border border-outline-variant/40">
-            <button
-              type="button"
-              onClick={() => setViewMode('candles')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                viewMode === 'candles' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Candles
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('line')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                viewMode === 'line' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Line
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                viewMode === 'table' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              Table
-            </button>
+          {/* Graph Types Dropdown Selector & Quick Switch */}
+          <div className="flex items-center gap-1.5">
+            {/* Quick-switch pills for top 3 popular modes */}
+            <div className="hidden md:flex items-center gap-1 rounded-lg bg-surface-container-low p-0.5 border border-outline-variant/40">
+              <button
+                type="button"
+                onClick={() => setViewMode('candles')}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                  viewMode === 'candles' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+                title="Japanese Candlesticks"
+              >
+                Candles
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('line')}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                  viewMode === 'line' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+                title="Area Line Chart"
+              >
+                Line
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('bars')}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                  viewMode === 'bars' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+                title="OHLC Bar Chart"
+              >
+                Bars
+              </button>
+            </div>
+
+            {/* Dropdown Menu Button */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowGraphDropdown(!showGraphDropdown)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/60 text-xs font-semibold text-on-surface transition-all shadow-xs"
+                title="Choose different types of graphs for this stock data"
+              >
+                <span className="material-symbols-outlined text-[16px] text-primary">
+                  {activeGraphType?.icon || 'candlestick_chart'}
+                </span>
+                <span className="hidden sm:inline font-medium">{activeGraphType?.label}</span>
+                <span className="sm:hidden font-medium">{activeGraphType?.shortLabel}</span>
+                <span className={`material-symbols-outlined text-[14px] text-on-surface-variant transition-transform duration-150 ${showGraphDropdown ? 'rotate-180' : ''}`}>
+                  expand_more
+                </span>
+              </button>
+
+              {/* Glassmorphic Dropdown List */}
+              {showGraphDropdown && (
+                <div className="absolute right-0 top-full mt-1.5 w-72 rounded-xl bg-[#0f141d]/95 backdrop-blur-xl border border-outline-variant/70 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3 py-1.5 border-b border-outline-variant/30 mb-1 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                      Available Graph Types
+                    </span>
+                    <span className="text-[10px] text-primary font-mono-code font-bold">
+                      {GRAPH_TYPES.length} formats
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {GRAPH_TYPES.map((gt) => {
+                      const isSelected = viewMode === gt.id;
+                      return (
+                        <button
+                          key={gt.id}
+                          type="button"
+                          onClick={() => {
+                            setViewMode(gt.id);
+                            setShowGraphDropdown(false);
+                          }}
+                          className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
+                            isSelected
+                              ? 'bg-primary/20 text-primary border border-primary/40'
+                              : 'hover:bg-surface-container-high text-on-surface border border-transparent'
+                          }`}
+                        >
+                          <span className={`material-symbols-outlined text-[18px] mt-0.5 ${isSelected ? 'text-primary' : 'text-on-surface-variant'}`}>
+                            {gt.icon}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold truncate">{gt.label}</span>
+                              {isSelected && (
+                                <span className="material-symbols-outlined text-[14px] text-primary">check</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-on-surface-variant leading-tight truncate">
+                              {gt.desc}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Fullscreen Toggle */}
@@ -553,7 +700,7 @@ export default function CandlestickChart({
               VOL
             </text>
 
-            {/* Area Line Mode */}
+            {/* Mode: Area Line */}
             {viewMode === 'line' && (
               <g>
                 <path d={areaPath} fill="url(#areaGradientTV)" />
@@ -576,7 +723,59 @@ export default function CandlestickChart({
               </g>
             )}
 
-            {/* Candlesticks & Volume Histogram */}
+            {/* Mode: Range / Volatility Band */}
+            {viewMode === 'range' && (
+              <g>
+                <path d={rangeBandPolygon} fill="rgba(56, 189, 248, 0.12)" />
+                <path d={rangeHighPath} fill="none" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+                <path d={rangeLowPath} fill="none" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+                <path d={linePath} fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                {visibleCandles.map((c, i) => {
+                  const x = i * candleSpacing + candleSpacing / 2;
+                  const y = getY(c.close);
+                  return (
+                    <circle
+                      key={i}
+                      cx={x}
+                      cy={y}
+                      r={hoveredIndex === i ? 4.5 : count > 80 ? 0 : 2}
+                      fill={hoveredIndex === i ? '#ffffff' : '#38bdf8'}
+                      stroke="#0c1017"
+                      strokeWidth="1.5"
+                    />
+                  );
+                })}
+              </g>
+            )}
+
+            {/* Mode: Baseline Deviation */}
+            {viewMode === 'baseline' && (
+              <g>
+                <line
+                  x1={0}
+                  y1={getY(meanBaselinePrice)}
+                  x2={plotWidth}
+                  y2={getY(meanBaselinePrice)}
+                  stroke="#64748b"
+                  strokeWidth="1.2"
+                  strokeDasharray="4 3"
+                  opacity="0.85"
+                />
+                <text
+                  x={plotWidth - 6}
+                  y={getY(meanBaselinePrice) - 4}
+                  fill="#94a3b8"
+                  fontSize="9"
+                  fontFamily="monospace"
+                  textAnchor="end"
+                >
+                  Baseline Mean: {currencySymbol}{meanBaselinePrice.toFixed(2)}
+                </text>
+                <path d={linePath} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+              </g>
+            )}
+
+            {/* Per-Candle Shapes (Candles, Hollow, Bars, Baseline Stems) & Volume Histogram */}
             {visibleCandles.map((c, i) => {
               const xCenter = i * candleSpacing + candleSpacing / 2;
               const yOpen = getY(c.open);
@@ -594,6 +793,16 @@ export default function CandlestickChart({
               const candleColor = c.isBullish ? '#10b981' : '#f43f5e';
               const isHovered = hoveredIndex === i;
 
+              // Heikin-Ashi data for hollow mode
+              const ha = heikinAshiCandles[i] || c;
+              const haYOpen = getY(ha.open);
+              const haYClose = getY(ha.close);
+              const haYHigh = getY(ha.high);
+              const haYLow = getY(ha.low);
+              const haBodyTop = Math.min(haYOpen, haYClose);
+              const haBodyHeight = Math.max(1.2, Math.abs(haYOpen - haYClose));
+              const haColor = ha.isBullish ? '#10b981' : '#f43f5e';
+
               return (
                 <g key={i}>
                   {/* Volume Bar */}
@@ -607,9 +816,9 @@ export default function CandlestickChart({
                     rx="1"
                   />
 
+                  {/* Mode: Standard Japanese Candlesticks */}
                   {viewMode === 'candles' && (
                     <g>
-                      {/* Upper & Lower Wick */}
                       <line
                         x1={xCenter}
                         y1={yHigh}
@@ -619,8 +828,6 @@ export default function CandlestickChart({
                         strokeWidth={candleSpacing < 3.5 ? 1 : isHovered ? 2 : 1.2}
                         opacity={isHovered ? 1 : 0.85}
                       />
-
-                      {/* Candle Body */}
                       <rect
                         x={bodyLeft}
                         y={bodyTop}
@@ -631,6 +838,86 @@ export default function CandlestickChart({
                         strokeWidth={candleSpacing < 4 ? 0.5 : isHovered ? 1.5 : 0.75}
                         rx={candleSpacing < 4 ? 0 : 1}
                         filter={isHovered ? 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.6))' : 'none'}
+                      />
+                    </g>
+                  )}
+
+                  {/* Mode: Hollow / Heikin-Ashi Candlesticks */}
+                  {viewMode === 'hollow' && (
+                    <g>
+                      <line
+                        x1={xCenter}
+                        y1={haYHigh}
+                        x2={xCenter}
+                        y2={haYLow}
+                        stroke={haColor}
+                        strokeWidth={candleSpacing < 3.5 ? 1 : isHovered ? 2 : 1.2}
+                        opacity={isHovered ? 1 : 0.85}
+                      />
+                      <rect
+                        x={bodyLeft}
+                        y={haBodyTop}
+                        width={candleBodyWidth}
+                        height={haBodyHeight}
+                        fill={ha.isBullish ? 'transparent' : '#f43f5e'}
+                        stroke={ha.isBullish ? '#10b981' : '#e11d48'}
+                        strokeWidth={ha.isBullish ? 1.5 : 0.75}
+                        rx={candleSpacing < 4 ? 0 : 1}
+                        filter={isHovered ? 'drop-shadow(0 0 5px rgba(16, 185, 129, 0.6))' : 'none'}
+                      />
+                    </g>
+                  )}
+
+                  {/* Mode: OHLC Western Tick Bars */}
+                  {viewMode === 'bars' && (
+                    <g>
+                      {/* Vertical High-Low Spine */}
+                      <line
+                        x1={xCenter}
+                        y1={yHigh}
+                        x2={xCenter}
+                        y2={yLow}
+                        stroke={candleColor}
+                        strokeWidth={candleSpacing < 3.5 ? 1 : isHovered ? 2.2 : 1.5}
+                      />
+                      {/* Left Tick: Open */}
+                      <line
+                        x1={xCenter - Math.max(3, candleBodyWidth / 2)}
+                        y1={yOpen}
+                        x2={xCenter}
+                        y2={yOpen}
+                        stroke={candleColor}
+                        strokeWidth={candleSpacing < 3.5 ? 1 : isHovered ? 2 : 1.5}
+                      />
+                      {/* Right Tick: Close */}
+                      <line
+                        x1={xCenter}
+                        y1={yClose}
+                        x2={xCenter + Math.max(3, candleBodyWidth / 2)}
+                        y2={yClose}
+                        stroke={candleColor}
+                        strokeWidth={candleSpacing < 3.5 ? 1 : isHovered ? 2 : 1.5}
+                      />
+                    </g>
+                  )}
+
+                  {/* Mode: Baseline Deviation Stems */}
+                  {viewMode === 'baseline' && (
+                    <g>
+                      <line
+                        x1={xCenter}
+                        y1={getY(meanBaselinePrice)}
+                        x2={xCenter}
+                        y2={yClose}
+                        stroke={c.close >= meanBaselinePrice ? '#10b981' : '#f43f5e'}
+                        strokeWidth={Math.max(1.5, candleBodyWidth * 0.6)}
+                        opacity={isHovered ? 1 : 0.7}
+                      />
+                      <circle
+                        cx={xCenter}
+                        cy={yClose}
+                        r={isHovered ? 4 : 2}
+                        fill={c.close >= meanBaselinePrice ? '#10b981' : '#f43f5e'}
                       />
                     </g>
                   )}
@@ -767,7 +1054,7 @@ export default function CandlestickChart({
                 <div className="text-on-surface-variant col-span-2">
                   Change:{' '}
                   <span className={visibleCandles[hoveredIndex].isBullish ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-                    {visibleCandles[hoveredIndex].change >= 0 ? '+' : ''}${visibleCandles[hoveredIndex].change.toFixed(2)} (
+                    {visibleCandles[hoveredIndex].change >= 0 ? '+' : ''}{currencySymbol}{Math.abs(visibleCandles[hoveredIndex].change).toFixed(2)} (
                     {visibleCandles[hoveredIndex].changePercent >= 0 ? '+' : ''}
                     {visibleCandles[hoveredIndex].changePercent.toFixed(2)}%)
                   </span>

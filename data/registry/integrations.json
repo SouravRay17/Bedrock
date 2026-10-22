@@ -1,0 +1,783 @@
+[
+  {
+    "id": "market-intel",
+    "name": "Market Intelligence",
+    "type": "mcp",
+    "endpoint": "http://localhost:8001/sse",
+    "environment": "sandbox",
+    "version": "1.1.0",
+    "commit": "d172c69",
+    "status": "ready",
+    "credential_ref": "market-intel-token",
+    "description": "Real-time market intelligence, equity fundamentals, OHLCV candlesticks, and portfolio risk analytics powered by yfinance.",
+    "discoveredTools": [
+      {
+        "id": "market-intel.health_check",
+        "name": "health_check",
+        "integrationId": "market-intel",
+        "description": "Health and readiness probe",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "path": "/health",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "health_check",
+            "description": "Health and readiness probe",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.get_cache_stats",
+        "name": "get_cache_stats",
+        "integrationId": "market-intel",
+        "description": "Retrieve in-memory TTL cache statistics and hit rates",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "path": "/api/cache/stats",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "get_cache_stats",
+            "description": "Retrieve in-memory TTL cache statistics and hit rates",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.clear_cache",
+        "name": "clear_cache",
+        "integrationId": "market-intel",
+        "description": "Clear and invalidate all in-memory market data TTL caches",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "path": "/api/cache/clear",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "clear_cache",
+            "description": "Clear and invalidate all in-memory market data TTL caches",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_search",
+        "name": "yfinance_search",
+        "integrationId": "market-intel",
+        "description": "Search stock tickers by company or common name with offset pagination",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 5
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            },
+            "max_results": {
+              "type": "integer",
+              "default": 5
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "path": "/api/search",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_search",
+            "description": "Search stock tickers by company or common name with offset pagination",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 5
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_search_post",
+        "name": "yfinance_search_post",
+        "integrationId": "market-intel",
+        "description": "Search stock tickers by company or common name (POST)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 5
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            },
+            "max_results": {
+              "type": "integer",
+              "default": 5
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "path": "/api/search",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_search_post",
+            "description": "Search stock tickers by company or common name (POST)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 5
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "default": 5
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_quote",
+        "name": "yfinance_get_quote",
+        "integrationId": "market-intel",
+        "description": "Fetch real-time price quote and 52-week range (cached 60s)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/quote",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_quote",
+            "description": "Fetch real-time price quote and 52-week range (cached 60s)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_quote_post",
+        "name": "yfinance_get_quote_post",
+        "integrationId": "market-intel",
+        "description": "Fetch real-time price quote and 52-week range (POST)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/quote",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_quote_post",
+            "description": "Fetch real-time price quote and 52-week range (POST)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_stock_info",
+        "name": "yfinance_get_stock_info",
+        "integrationId": "market-intel",
+        "description": "Fetch company fundamentals and valuation (cached 5m)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/stock_info",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_stock_info",
+            "description": "Fetch company fundamentals and valuation (cached 5m)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_stock_info_post",
+        "name": "yfinance_get_stock_info_post",
+        "integrationId": "market-intel",
+        "description": "Fetch company fundamentals and valuation (POST)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/stock_info",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_stock_info_post",
+            "description": "Fetch company fundamentals and valuation (POST)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_historical_data",
+        "name": "yfinance_get_historical_data",
+        "integrationId": "market-intel",
+        "description": "Fetch historical candlestick price bars (OHLCV) with offset pagination",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            },
+            "period": {
+              "type": "string",
+              "default": "1mo",
+              "enum": [
+                "1d",
+                "5d",
+                "1mo",
+                "3mo",
+                "6mo",
+                "1y",
+                "2y",
+                "3y",
+                "4y",
+                "5y",
+                "10y",
+                "max",
+                "ytd"
+              ]
+            },
+            "interval": {
+              "type": "string",
+              "default": "1d",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "1d",
+                "1wk",
+                "1mo",
+                "auto"
+              ]
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/historical_data",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_historical_data",
+            "description": "Fetch historical candlestick price bars (OHLCV) with offset pagination",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  },
+                  "period": {
+                    "type": "string",
+                    "default": "1mo",
+                    "enum": [
+                      "1d",
+                      "5d",
+                      "1mo",
+                      "3mo",
+                      "6mo",
+                      "1y",
+                      "2y",
+                      "3y",
+                      "4y",
+                      "5y",
+                      "10y",
+                      "max",
+                      "ytd"
+                    ]
+                  },
+                  "interval": {
+                    "type": "string",
+                    "default": "1d",
+                    "enum": [
+                      "1m",
+                      "5m",
+                      "15m",
+                      "30m",
+                      "1h",
+                      "1d",
+                      "1wk",
+                      "1mo",
+                      "auto"
+                    ]
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_historical_data_post",
+        "name": "yfinance_get_historical_data_post",
+        "integrationId": "market-intel",
+        "description": "Fetch historical candlestick price bars (OHLCV) (POST)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            },
+            "period": {
+              "type": "string",
+              "default": "1mo"
+            },
+            "interval": {
+              "type": "string",
+              "default": "1d"
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/historical_data",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_historical_data_post",
+            "description": "Fetch historical candlestick price bars (OHLCV) (POST)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  },
+                  "period": {
+                    "type": "string",
+                    "default": "1mo"
+                  },
+                  "interval": {
+                    "type": "string",
+                    "default": "1d"
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_news",
+        "name": "yfinance_get_news",
+        "integrationId": "market-intel",
+        "description": "Fetch latest market news headlines and links with offset pagination",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 5
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/news",
+        "httpMethod": "GET",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_news",
+            "description": "Fetch latest market news headlines and links with offset pagination",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 5
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.yfinance_get_news_post",
+        "name": "yfinance_get_news_post",
+        "integrationId": "market-intel",
+        "description": "Fetch latest market news headlines and links (POST)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol_or_name": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 5
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          "required": [
+            "symbol_or_name"
+          ]
+        },
+        "path": "/api/news",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "yfinance_get_news_post",
+            "description": "Fetch latest market news headlines and links (POST)",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "symbol_or_name": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 5
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                },
+                "required": [
+                  "symbol_or_name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "market-intel.portfolio_live_analysis",
+        "name": "portfolio_live_analysis",
+        "integrationId": "market-intel",
+        "description": "Perform real-time live portfolio intelligence with offset-based holdings pagination",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "portfolio_file": {
+              "type": "string",
+              "nullable": true
+            },
+            "offset": {
+              "type": "integer",
+              "default": 0
+            },
+            "limit": {
+              "type": "integer",
+              "nullable": true
+            },
+            "holdings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "symbol": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "number"
+                  },
+                  "buy_price": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "symbol",
+                  "quantity",
+                  "buy_price"
+                ]
+              },
+              "nullable": true
+            }
+          },
+          "required": []
+        },
+        "path": "/api/portfolio_live_analysis",
+        "httpMethod": "POST",
+        "bedrockToolSpec": {
+          "toolSpec": {
+            "name": "portfolio_live_analysis",
+            "description": "Perform real-time live portfolio intelligence with offset-based holdings pagination",
+            "inputSchema": {
+              "json": {
+                "type": "object",
+                "properties": {
+                  "portfolio_file": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "holdings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "symbol": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "number"
+                        },
+                        "buy_price": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "symbol",
+                        "quantity",
+                        "buy_price"
+                      ]
+                    },
+                    "nullable": true
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    ],
+    "whitelistedToolNames": [
+      "health_check",
+      "get_cache_stats",
+      "clear_cache",
+      "yfinance_search",
+      "yfinance_search_post",
+      "yfinance_get_quote",
+      "yfinance_get_quote_post",
+      "yfinance_get_stock_info",
+      "yfinance_get_stock_info_post",
+      "yfinance_get_historical_data",
+      "yfinance_get_historical_data_post",
+      "yfinance_get_news",
+      "yfinance_get_news_post",
+      "portfolio_live_analysis"
+    ],
+    "lastSyncedAt": 1791236148.7445407,
+    "createdAt": 1791236112.6836638,
+    "updatedAt": 1791236148.7445455
+  }
+]
